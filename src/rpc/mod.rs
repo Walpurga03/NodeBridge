@@ -1,8 +1,10 @@
-use anyhow::{Result, anyhow};
+mod mempool;  // Neues Modul registrieren
+pub use mempool::MempoolInfo;  // Re-export
+
+use anyhow::Result;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use dotenv::dotenv;
 use std::env;
-use std::fmt;
 
 pub struct BitcoinRPC {
     client: Client,
@@ -18,6 +20,7 @@ pub struct NodeStatus {
     pub verification_progress: f64,
     pub mempool_size: u64,      
     pub network: String,        
+    pub mempool_info: MempoolInfo,
 }
 
 impl BitcoinRPC {
@@ -34,7 +37,9 @@ impl BitcoinRPC {
         let auth = Auth::UserPass(rpc_user, rpc_pass);
         let client = Client::new(&rpc_url, auth)?;
         
-        Ok(Self { client })
+        Ok(Self { 
+            client,
+        })
     }
 
     pub fn test_connection(&self) -> Result<NodeStatus> {
@@ -60,6 +65,9 @@ impl BitcoinRPC {
             Err(_) => 0
         };
 
+        // Mempool-Informationen abrufen
+        let mempool_info = self.get_mempool_info()?;
+
         Ok(NodeStatus {
             version,
             height,
@@ -69,6 +77,7 @@ impl BitcoinRPC {
             verification_progress,
             mempool_size,
             network,
+            mempool_info,
         })
     }
 } 
