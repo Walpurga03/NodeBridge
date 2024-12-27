@@ -1,6 +1,7 @@
 // Für Header, Footer und andere wiederverwendbare Komponenten
 use super::common::*;
 use std::time::Duration;
+use ratatui::widgets::Tabs;
 
 pub fn create_header(version: u64) -> Paragraph<'static> {
     let version_str = format!("Bitcoin Core v{}.{}.{}",
@@ -54,38 +55,38 @@ pub fn create_footer(
             .border_style(Style::default().fg(Color::DarkGray)))
 }
 
-pub fn create_tabs(current_tab: &Tab) -> Paragraph<'static> {
-    let tabs = vec![
-        (Tab::Overview, "Übersicht"),
-        (Tab::BlockDetails, "Block Details"),
-        (Tab::Mempool, "Mempool"),
-        (Tab::Network, "Netzwerk"),
+pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {
+    let titles = vec![
+        "Übersicht",
+        "Block Details",
+        "Mempool",
+        "Netzwerk",
+        "Peer Liste",
+        "Mining",
+        "Security",
+        "Explorer",
     ];
 
-    let content = Line::from(
-        tabs.iter()
-            .flat_map(|(tab, title)| {
-                vec![
-                    Span::raw("["),
-                    Span::styled(
-                        *title,
-                        Style::default().fg(
-                            if tab == current_tab {
-                                Color::Green
-                            } else {
-                                Color::Gray
-                            }
-                        )
-                    ),
-                    Span::raw("] "),
-                ]
-            })
-            .collect::<Vec<_>>()
-    );
+    let tabs = titles.iter().map(|t| {
+        Line::from(vec![
+            Span::raw(*t)
+        ])
+    }).collect();
 
-    Paragraph::new(vec![content])
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::White))
-            .title(" Navigation "))
+    Tabs::new(tabs)
+        .block(Block::default().borders(Borders::ALL))
+        .select(match current_tab {
+            Tab::Overview => 0,
+            Tab::BlockDetails => 1,
+            Tab::Mempool => 2,
+            Tab::Network => 3,
+            Tab::PeerList => 4,
+            Tab::Mining => 5,
+            Tab::Security => 6,
+            Tab::Explorer => 7,
+        })
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD))
 } 

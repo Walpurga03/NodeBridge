@@ -1,165 +1,135 @@
 // Für die Hilfe-Ansicht
 use super::common::*;
 
-pub fn create_help() -> Paragraph<'static> {
-    let content = vec![
-        Line::from(vec![
-            Span::styled("Tastatur-Befehle", 
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(Span::styled("", Style::default().bg(Color::Black))),
-        Line::from(vec![
-            Span::styled("Navigation", 
-                Style::default()
-                    .fg(Color::Cyan)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [1-4] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Ansichten wechseln", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [h] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Hilfe ein/ausblenden", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [ESC] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Hilfe ausblenden", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(Span::styled("", Style::default().bg(Color::Black))),
-        Line::from(vec![
-            Span::styled("Updates", 
-                Style::default()
-                    .fg(Color::Cyan)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [r] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Manuelles Update", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [+] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Update-Intervall erhöhen (max: 60s)", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" [-] ", 
-                Style::default().bg(Color::Black)),
-            Span::styled("Update-Intervall verringern (min: 1s)", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(Span::styled("", Style::default().bg(Color::Black))),
-        Line::from(vec![
-            Span::styled("Status-Anzeigen", 
-                Style::default()
-                    .fg(Color::Cyan)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" ✓ ", 
-                Style::default()
-                    .fg(Color::Green)
-                    .bg(Color::Black)),
-            Span::styled("Bereit - Warte auf nächstes Update", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(vec![
-            Span::styled(" ⠋⠙⠹⠸ ", 
-                Style::default()
-                    .fg(Color::Yellow)
-                    .bg(Color::Black)),
-            Span::styled("Aktualisiere Daten...", 
-                Style::default()
-                    .fg(Color::Gray)
-                    .bg(Color::Black)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Mempool Details:", 
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(""),
-        Line::from("Die Mempool-Ansicht zeigt Informationen über unbestätigte Transaktionen:"),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("• Transaktionen: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Gesamtzahl der unbestätigten Transaktionen", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• Größe: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Gesamtgröße aller Transaktionen in MB", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• Speichernutzung: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Aktueller Mempool-Speicherverbrauch", Style::default()),
-        ]),
-        Line::from(""),
-        Line::from("Gebührenverteilung (sat/vB):"),
-        Line::from(vec![
-            Span::styled("• 1-3: ", Style::default().fg(Color::LightGreen)),
-            Span::styled("Sehr niedrige Priorität, lange Wartezeit", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• 4-6: ", Style::default().fg(Color::LightGreen)),
-            Span::styled("Niedrige Priorität", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• 7-10: ", Style::default().fg(Color::Green)),
-            Span::styled("Mittlere Priorität", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• 11-15: ", Style::default().fg(Color::Yellow)),
-            Span::styled("Hohe Priorität", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• 16-20: ", Style::default().fg(Color::LightRed)),
-            Span::styled("Sehr hohe Priorität", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• 21+: ", Style::default().fg(Color::Red)),
-            Span::styled("Express-Priorität, nächster Block", Style::default()),
-        ]),
-        Line::from(""),
-        Line::from("Balkendiagramm:"),
-        Line::from(vec![
-            Span::styled("• Länge: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Prozentualer Anteil der Transaktionen", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• Farbe: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Indikator für die Priorität/Geschwindigkeit", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("• Zahlen: ", Style::default().fg(Color::Cyan)),
-            Span::styled("Prozent und absolute Anzahl der Transaktionen", Style::default()),
-        ]),
-    ];
+pub fn create_help(current_tab: &Tab) -> Paragraph<'static> {
+    let content = match current_tab {
+        Tab::Overview => vec![
+            Line::from(vec![
+                Span::styled("Übersicht & Block Info", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [R] Aktualisieren"),
+            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(""),
+            Line::from("Anzeigen:"),
+            Line::from(" • Blockhöhe und Hash"),
+            Line::from(" • Netzwerk-Typ und Verbindungen"),
+            Line::from(" • Synchronisationsstatus"),
+            Line::from(" • Mining-Difficulty (NEU)"),
+            Line::from(" • Hashrate (NEU)"),
+        ],
+        Tab::BlockDetails => vec![
+            Line::from(vec![
+                Span::styled("Block Details", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from(" • Aktuelle Blockhöhe"),
+            Line::from(" • Block Hash"),
+            Line::from(" • Zeitstempel"),
+        ],
+        Tab::Mempool => vec![
+            Line::from(vec![
+                Span::styled("Mempool Status", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [R] Aktualisieren"),
+            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(""),
+            Line::from("Statistiken:"),
+            Line::from(" • Transaktionsanzahl und Größe"),
+            Line::from(" • Gebührenverteilung (sat/vB)"),
+            Line::from(" • Größenverteilung der Transaktionen"),
+            Line::from(" • Altersverteilung im Mempool"),
+        ],
+        Tab::Network => vec![
+            Line::from(vec![
+                Span::styled("Netzwerk & Peers", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [R] Aktualisieren"),
+            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(""),
+            Line::from("Verbindungen:"),
+            Line::from(" • Gesamtzahl und Onion-Anteil"),
+            Line::from(" • Beste/Schlechteste Latenz"),
+            Line::from(""),
+            Line::from("Latenz-Werte:"),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("< 100ms", Style::default().fg(Color::Green)),
+                Span::raw(" = sehr gut"),
+            ]),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("100-500ms", Style::default().fg(Color::Yellow)),
+                Span::raw(" = normal"),
+            ]),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("> 500ms", Style::default().fg(Color::Red)),
+                Span::raw(" = langsam"),
+            ]),
+        ],
+        Tab::PeerList => vec![
+            Line::from(vec![
+                Span::styled("Peer Liste", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from(" • Liste aller verbundenen Peers"),
+            Line::from(" • Sortiert nach Latenz"),
+            Line::from(" • Onion/Clearnet Status"),
+        ],
+        Tab::Mining => vec![
+            Line::from(vec![
+                Span::styled("Mining Status", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [R] Aktualisieren"),
+            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(""),
+            Line::from("Informationen:"),
+            Line::from(" • Aktuelle Difficulty"),
+            Line::from(" • Netzwerk-Hashrate"),
+            Line::from(" • Zeit bis Difficulty-Anpassung"),
+            Line::from(" • Mining-Pool Verteilung"),
+        ],
+        Tab::Security => vec![
+            Line::from(vec![
+                Span::styled("Sicherheitsstatus", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [R] Aktualisieren"),
+            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(""),
+            Line::from("Überwachung:"),
+            Line::from(" • Softwareversion-Check"),
+            Line::from(" • Peer-Verbindungssicherheit"),
+            Line::from(" • Firewall-Status"),
+            Line::from(" • Tor-Verbindungsqualität"),
+        ],
+        Tab::Explorer => vec![
+            Line::from(vec![
+                Span::styled("Blockchain Explorer", Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from("Tastenbelegung:"),
+            Line::from(" [B] Block suchen"),
+            Line::from(" [T] Transaktion suchen"),
+            Line::from(" [A] Adresse suchen"),
+            Line::from(" [Enter] Suche ausführen"),
+            Line::from(" [Esc] Suche abbrechen"),
+            Line::from(""),
+            Line::from("Suchoptionen:"),
+            Line::from(" • Block: Höhe oder Hash"),
+            Line::from(" • Transaktion: TXID"),
+            Line::from(" • Adresse: Base58 oder Bech32"),
+        ],
+    };
 
     Paragraph::new(content)
         .block(Block::default()

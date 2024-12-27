@@ -5,6 +5,7 @@ use anyhow::Result;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use dotenv::dotenv;
 use std::env;
+use std::time::{Duration, Instant};
 
 pub struct BitcoinRPC {
     client: Client,
@@ -21,6 +22,22 @@ pub struct NodeStatus {
     pub mempool_size: u64,      
     pub network: String,        
     pub mempool_info: MempoolInfo,
+    pub peers: Vec<PeerInfo>,  // Neue Peer-Informationen
+}
+
+#[derive(Debug, Clone)]
+pub struct PeerInfo {
+    pub addr: String,
+    pub version: u64,
+    pub subver: String,
+    pub latency: f64,
+    pub ping: f64,
+    pub connected_time: u64,
+    pub last_send: u64,
+    pub last_recv: u64,
+    pub bytes_sent: u64,
+    pub bytes_recv: u64,
+    pub inbound: bool,
 }
 
 impl BitcoinRPC {
@@ -43,10 +60,27 @@ impl BitcoinRPC {
     }
 
     pub fn test_connection(&self) -> Result<NodeStatus> {
-        // Basis-Informationen abrufen
+        let timeout = Duration::from_secs(5);
+        let start = Instant::now();
+        
+        let check_timeout = |start: Instant, timeout: Duration| -> Result<()> {
+            if start.elapsed() > timeout {
+                return Err(anyhow::anyhow!("RPC Timeout nach {} Sekunden", timeout.as_secs()));
+            }
+            Ok(())
+        };
+
+        // Alle RPC-Aufrufe mit Timeout prüfen
+        check_timeout(start, timeout)?;
         let version = self.client.version()? as u64;
+
+        check_timeout(start, timeout)?;
         let height = self.client.get_block_count()? as u64;
+
+        check_timeout(start, timeout)?;
         let block_hash = self.client.get_best_block_hash()?;
+
+        check_timeout(start, timeout)?;
         let block_info = self.client.get_block_header_info(&block_hash)?;
 
         // Versuche zusätzliche Informationen zu bekommen
@@ -68,6 +102,9 @@ impl BitcoinRPC {
         // Mempool-Informationen abrufen
         let mempool_info = self.get_mempool_info()?;
 
+        // Peer-Informationen abrufen
+        let peers = self.get_peer_info()?;
+
         Ok(NodeStatus {
             version,
             height,
@@ -78,6 +115,25 @@ impl BitcoinRPC {
             mempool_size,
             network,
             mempool_info,
+            peers,  // Neue Peer-Informationen hinzufügen
         })
+    }
+
+    pub fn get_peer_info(&self) -> Result<Vec<PeerInfo>> {
+        let peers = self.client.get_peer_info()?;
+        
+        Ok(peers.into_iter().map(|p| PeerInfo {
+            addr: p.addr,
+            version: p.version as u64,
+            subver: p.subver,
+            latency: p.pingtime.unwrap_or(0.0),
+            ping: p.minping.unwrap_or(0.0),
+            connected_time: p.conntime as u64,
+            last_send: p.lastsend as u64,
+            last_recv: p.lastrecv as u64,
+            bytes_sent: p.bytessent as u64,
+            bytes_recv: p.bytesrecv as u64,
+            inbound: p.inbound,
+        }).collect())
     }
 } 

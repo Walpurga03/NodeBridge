@@ -1,125 +1,84 @@
 # Projektstruktur
 
-## Hauptverzeichnis
+## Verzeichnisse
+
 ```
 nodebridge/
-├── src/              # Quellcode
-├── target/           # Build-Artefakte
-├── .env              # Konfigurationsdatei für Bitcoin RPC
-├── .env.example      # Beispiel-Konfigurationsdatei
-├── .gitignore        # Git-Ausschluss Konfiguration
-├── Cargo.lock        # Exakte Dependency-Versionen
-├── Cargo.toml        # Rust Projekt-Konfiguration
-├── frotschritt.md    # Entwicklungsfortschritt
-├── MASTERPLAN.md     # Masterplan
-├── README.md         # Projekt-Dokumentation
-├── STRUKTUR.md       # Diese Datei - Projektstruktur
-```
-
-## Source Code Struktur
-```
-src/
-├── main.rs           # Haupteinstiegspunkt der Anwendung
-├── rpc/              # Bitcoin RPC Kommunikation
-│   └── mod.rs        # RPC Client Implementation
-└── ui/               # Terminal User Interface
-    ├── mod.rs        # UI Hauptmodul und Zustandsverwaltung
-    ├── common.rs     # Gemeinsame Imports und Typen
-    ├── components.rs # Wiederverwendbare UI Komponenten
-    ├── help.rs       # Hilfe-Overlay Implementation
-    ├── render.rs     # Haupt-Rendering Logik
-    └── tabs.rs       # Tab-spezifische Ansichten
-```
-
-## Detaillierte Beschreibung
-
-### Hauptdateien
-- `main.rs`: Initialisiert die Anwendung und startet die UI
-- `.env`: Enthält Bitcoin Node Verbindungsdaten (nicht im Git)
-- `.env.example`: Zeigt benötigte Umgebungsvariablen
-
-### RPC Modul
-- `rpc/mod.rs`:
-  - BitcoinRPC Struktur für Node-Kommunikation
-  - NodeStatus Struktur für Blockchain-Daten
-  - RPC Methoden Implementation
-  - Error Handling für RPC Aufrufe
-
-### UI Modul
-- `ui/mod.rs`:
-  - UI Struktur und Zustandsverwaltung
-  - Event Handling (Tastatureingaben)
-  - Terminal Setup und Cleanup
-  - Update-Zyklus Management
-
-- `ui/common.rs`:
-  - Gemeinsame Imports für alle UI Module
-  - Gemeinsame Typen und Konstanten
-  - Re-Exports häufig genutzter Komponenten
-
-- `ui/components.rs`:
-  - Header: Zeigt Bitcoin Core Version
-  - Footer: Zeigt Steuerung und Update-Status
-  - Tabs: Navigation zwischen Ansichten
-  - Wiederverwendbare UI Elemente
-
-- `ui/help.rs`:
-  - Hilfe-Overlay Implementation
-  - Tastatur-Shortcuts Dokumentation
-  - Status-Anzeigen Erklärungen
-
-- `ui/render.rs`:
-  - Hauptlogik für UI Rendering
-  - Layout Management
-  - Tab-Switching Logik
-  - Hilfe-Overlay Rendering
-
-- `ui/tabs.rs`:
-  - Overview: Allgemeine Node Informationen
-  - Block Details: Aktuelle Block Informationen
-  - Mempool: Transaktions-Queue Status
-  - Network: Verbindungs- und Sync-Status
-
-## Abhängigkeiten
-- `ratatui`: Terminal UI Framework
-- `crossterm`: Terminal Manipulation
-- `bitcoincore-rpc`: Bitcoin Core RPC Client
-- `anyhow`: Error Handling
-- `chrono`: Zeitstempel Formatierung
-- `dotenv`: Umgebungsvariablen
-
-## Konfiguration
-Die Anwendung wird über folgende Umgebungsvariablen konfiguriert:
-- `RPC_URL`: Bitcoin Node RPC URL
-- `RPC_USER`: RPC Benutzername
-- `RPC_PASS`: RPC Passwort
-
-## Git-Konfiguration
-- `.gitignore`: Definiert Dateien und Verzeichnisse, die nicht versioniert werden:
-  ```
-  /target          # Kompilierte Binaries und Abhängigkeiten
-  **/*.rs.bk      # Rust Backup-Dateien
-  .env            # Lokale Konfiguration mit sensiblen Daten
-  .idea/          # IntelliJ IDEA Projektdateien
-  .vscode/        # Visual Studio Code Einstellungen
-  *.pdb          # Windows Debug-Dateien
-  ```
-
-## Build-Verzeichnis
-```
-target/
-├── debug/              # Debug Build-Artefakte
-│   ├── nodebridge     # Ausführbare Debug-Version
-│   ├── deps/          # Kompilierte Abhängigkeiten
-│   ├── build/         # Build-Skript Ausgaben
-│   ├── examples/      # Kompilierte Beispiele
-│   └── incremental/   # Inkrementelle Kompilierung
+├── src/
+│   ├── rpc/                 # Bitcoin Core RPC Kommunikation
+│   │   ├── mod.rs          # RPC Client & Basistypen
+│   │   ├── mempool.rs      # Mempool-spezifische RPC Calls
+│   │   ├── mining.rs       # Mining & Difficulty RPC Calls (NEU)
+│   │   └── security.rs     # Sicherheits-bezogene Calls (NEU)
+│   │
+│   ├── ui/                 # Terminal UI Komponenten
+│   │   ├── mod.rs         # UI State & Event Handling
+│   │   ├── tabs/          # Tab-spezifische UI Komponenten
+│   │   │   ├── overview.rs # Übersicht & Block Tab
+│   │   │   ├── mempool.rs  # Mempool Visualisierung
+│   │   │   ├── network.rs  # Netzwerk & Peers
+│   │   │   ├── mining.rs   # Mining Informationen (NEU)
+│   │   │   └── security.rs # Sicherheits Tab (NEU)
+│   │   │
+│   │   ├── components.rs  # Wiederverwendbare UI Komponenten
+│   │   ├── theme.rs       # Farben & Styling (NEU)
+│   │   ├── help.rs        # Hilfe-System
+│   │   └── render.rs      # Haupt-Rendering Logik
+│   │
+│   ├── config/            # Konfiguration (NEU)
+│   │   ├── mod.rs        # Konfigurations-Management
+│   │   └── settings.rs    # Benutzereinstellungen
+│   │
+│   └── main.rs           # Programmstart & Setup
 │
-├── release/           # Release Build-Artefakte
-│   ├── nodebridge    # Optimierte ausführbare Version
-│   ├── deps/         # Optimierte Abhängigkeiten
-│   └── build/        # Release Build-Skripte
+├── config/               # Konfigurationsdateien (NEU)
+│   └── default.toml     # Standard-Konfiguration
 │
-└── doc/              # Generierte Dokumentation
-    └── nodebridge/   # API Dokumentation
+└── docs/                # Dokumentation (NEU)
+    ├── MASTERPLAN.md    # Projektübersicht
+    ├── STRUKTUR.md      # Diese Datei
+    └── FORTSCHRITT.md   # Entwicklungsfortschritt
 ```
+
+## Modulare Struktur
+
+### RPC Module
+- **mod.rs**: Basis RPC Client & gemeinsame Typen
+- **mempool.rs**: Mempool-bezogene RPC Calls
+- **mining.rs**: Mining & Difficulty Abfragen (NEU)
+- **security.rs**: Sicherheitsrelevante Abfragen (NEU)
+
+### UI Module
+- **tabs/**: Separate Module für jeden Tab
+  - Bessere Wartbarkeit
+  - Klare Zuständigkeiten
+  - Einfachere Tests
+
+- **components.rs**: Gemeinsame UI Elemente
+  - Header
+  - Footer
+  - Navigation
+  - Status-Anzeigen
+  - Popups & Alerts
+
+- **theme.rs**: Theming System (NEU)
+  - Farbschemata
+  - Styling Definitionen
+  - Dark/Light Mode
+
+### Konfiguration (NEU)
+- Zentrale Konfigurationsverwaltung
+- Benutzereinstellungen
+- Persistente Speicherung
+
+## Datenfluss
+1. RPC Client sammelt Daten
+2. Daten werden aufbereitet und zwischengespeichert
+3. UI Module rendern Daten
+4. Event System verarbeitet Benutzereingaben
+5. Konfiguration steuert Verhalten
+
+## Erweiterbarkeit
+- Modulare Struktur ermöglicht einfache Erweiterungen
+- Neue Tabs können unabhängig entwickelt werden
+- Gemeinsame Komponenten fördern Konsistenz
