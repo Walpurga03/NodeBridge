@@ -57,7 +57,7 @@ pub fn create_footer(
 
 pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {
     let titles = vec![
-        "Übersicht",
+        "Dashboard",
         "Block Details",
         "Mempool",
         "Netzwerk",
@@ -76,7 +76,7 @@ pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {
     Tabs::new(tabs)
         .block(Block::default().borders(Borders::ALL))
         .select(match current_tab {
-            Tab::Overview => 0,
+            Tab::Dashboard => 0,
             Tab::BlockDetails => 1,
             Tab::Mempool => 2,
             Tab::Network => 3,

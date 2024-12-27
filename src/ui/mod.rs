@@ -24,7 +24,7 @@ pub(crate) use common::*;
 
 #[derive(PartialEq)]
 pub enum Tab {
-    Overview,
+    Dashboard,
     BlockDetails,
     Mempool,
     Network,
@@ -70,7 +70,7 @@ impl UI {
             node_info: None,
             last_update: Instant::now(),
             update_interval: Duration::from_secs(5),
-            current_tab: Tab::Overview,
+            current_tab: Tab::Dashboard,
             show_help: false,
             is_updating: true,
             spinner_state: 0,
@@ -181,7 +181,7 @@ impl UI {
                         KeyCode::Char('h') => self.show_help = !self.show_help,
                         KeyCode::Char('+') => self.increase_update_interval(),
                         KeyCode::Char('-') => self.decrease_update_interval(),
-                        KeyCode::Char('1') => self.current_tab = Tab::Overview,
+                        KeyCode::Char('1') => self.current_tab = Tab::Dashboard,
                         KeyCode::Char('2') => self.current_tab = Tab::BlockDetails,
                         KeyCode::Char('3') => self.current_tab = Tab::Mempool,
                         KeyCode::Char('4') => self.current_tab = Tab::Network,

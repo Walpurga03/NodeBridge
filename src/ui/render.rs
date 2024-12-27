@@ -5,6 +5,11 @@ use crate::rpc::{MempoolInfo, NodeStatus};
 use crate::ui::{StatusMessage, MessageLevel};
 use ratatui::prelude::Alignment;
 use ratatui::widgets::{Paragraph, Table};
+use super::tabs::{
+    render_node_info, render_block_details, render_mempool,
+    render_network, render_peer_list, render_mining,
+    render_security, render_explorer
+};
 
 enum ContentWidget<'a> {
     Text(Paragraph<'a>),
@@ -47,31 +52,36 @@ pub fn draw_ui(
         let tabs = components::create_tabs(tab);
         
         let content = match tab {
-            Tab::Overview => ContentWidget::Text(tabs::create_overview(
-                height,
-                block_hash.to_string(),
-                timestamp,
+            Tab::Dashboard => ContentWidget::Text(render_node_info(
+                &network,
                 connections,
+                height,
+                height,
+                node_info.difficulty,
+                node_info.chain_work.clone(),
                 verification_progress,
+                node_info.initial_block_download,
+                node_info.size_on_disk,
+                node_info.pruned,
                 mempool_size,
-                network.to_string(),
+                "",
             )),
-            Tab::BlockDetails => ContentWidget::Text(tabs::create_block_details(
+            Tab::BlockDetails => ContentWidget::Text(render_block_details(
                 height,
                 block_hash.to_string(),
                 timestamp,
             )),
-            Tab::Mempool => ContentWidget::Text(tabs::create_mempool(mempool_info)),
-            Tab::Network => ContentWidget::Text(tabs::create_network(
+            Tab::Mempool => ContentWidget::Text(render_mempool(mempool_info)),
+            Tab::Network => ContentWidget::Text(render_network(
                 connections,
                 network.to_string(),
                 verification_progress,
                 &node_info.peers,
             )),
-            Tab::PeerList => ContentWidget::Table(tabs::create_peer_list(&node_info.peers)),
-            Tab::Mining => ContentWidget::Text(tabs::create_mining()),
-            Tab::Security => ContentWidget::Text(tabs::create_security()),
-            Tab::Explorer => ContentWidget::Text(tabs::create_explorer()),
+            Tab::PeerList => ContentWidget::Table(render_peer_list(&node_info.peers)),
+            Tab::Mining => ContentWidget::Text(render_mining()),
+            Tab::Security => ContentWidget::Text(render_security()),
+            Tab::Explorer => ContentWidget::Text(render_explorer()),
         };
         let footer = components::create_footer(update_interval, is_updating, spinner_state);
 
