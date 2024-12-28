@@ -1,4 +1,4 @@
-mod tabs;
+pub mod tabs;
 mod help;
 mod components;
 mod render;
@@ -7,9 +7,9 @@ mod common;
 use std::io;
 use std::time::{Duration, Instant};
 use crossterm::{
-    event::{self, Event, KeyCode, DisableMouseCapture},
+    event::{self, Event, KeyCode, DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::{CrosstermBackend},
@@ -19,6 +19,7 @@ use ratatui::{
     layout::Alignment,
 };
 use crate::rpc::{BitcoinRPC, NodeStatus};
+pub use crate::ui::tabs::block_details::BlockSearchMode;
 
 pub(crate) use common::*;
 
@@ -46,6 +47,9 @@ pub struct UI {
     spinner_state: usize,
     connection_state: ConnectionState,
     status_messages: Vec<StatusMessage>,
+    block_input_active: bool,
+    block_input: String,
+    block_search_mode: BlockSearchMode,
 }
 
 #[derive(Clone)]
@@ -63,20 +67,42 @@ pub enum MessageLevel {
 }
 
 impl UI {
-    pub fn new(terminal: Terminal<CrosstermBackend<io::Stdout>>) -> anyhow::Result<Self> {
+    pub fn new(initial_block_mode: BlockSearchMode) -> anyhow::Result<Self> {
+        // Terminal in Raw-Mode versetzen
+        enable_raw_mode()?;
+        let mut stdout = io::stdout();
+        execute!(stdout, EnableMouseCapture)?;
+        
+        let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
+        
         Ok(Self {
             terminal,
-            rpc_client: None,
-            node_info: None,
-            last_update: Instant::now(),
-            update_interval: Duration::from_secs(5),
             current_tab: Tab::Dashboard,
             show_help: false,
-            is_updating: true,
+            update_interval: Duration::from_secs(10),
+            last_update: Instant::now(),
+            is_updating: false,
             spinner_state: 0,
+            rpc_client: None,
+            node_info: None,
             connection_state: ConnectionState::Connecting,
             status_messages: Vec::new(),
+            block_input_active: false,
+            block_input: String::new(),
+            block_search_mode: initial_block_mode,
         })
+    }
+
+    pub fn cleanup(&mut self) -> anyhow::Result<()> {
+        // Terminal-Modus zurücksetzen
+        disable_raw_mode()?;
+        execute!(
+            self.terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        self.terminal.show_cursor()?;
+        Ok(())
     }
 
     fn try_connect(&mut self) -> anyhow::Result<()> {
@@ -154,6 +180,9 @@ impl UI {
                                 &node_info.mempool_info,
                                 &self.status_messages,
                                 node_info,
+                                &self.rpc_client,
+                                &self.block_search_mode,
+                                self.block_input_active,
                             )
                         }
                     }
@@ -189,7 +218,36 @@ impl UI {
                         KeyCode::Char('6') => self.current_tab = Tab::Mining,
                         KeyCode::Char('7') => self.current_tab = Tab::Security,
                         KeyCode::Char('8') => self.current_tab = Tab::Explorer,
-                        KeyCode::Esc => self.show_help = false,
+                        KeyCode::Enter if self.current_tab == Tab::BlockDetails => {
+                            if self.block_input_active {
+                                if !self.block_input.is_empty() {
+                                    self.block_search_mode = BlockSearchMode::Custom(self.block_input.clone());
+                                }
+                                self.block_input_active = false;
+                            } else {
+                                self.block_input_active = true;
+                                self.block_input.clear();
+                                self.block_search_mode = BlockSearchMode::Latest;
+                            }
+                        },
+                        KeyCode::Esc => {
+                            if self.current_tab == Tab::BlockDetails && self.block_input_active {
+                                // Im Block-Details Tab: Eingabemodus beenden
+                                self.block_input_active = false;
+                                self.block_input.clear();
+                                self.block_search_mode = BlockSearchMode::Latest;
+                            } else {
+                                // In anderen Tabs: Hilfe ausblenden
+                                self.show_help = false;
+                            }
+                        },
+                        KeyCode::Char(c) if self.block_input_active => {
+                            println!("Char input: {}", c); // Debug-Ausgabe
+                            self.block_input.push(c);
+                        },
+                        KeyCode::Backspace if self.block_input_active => {
+                            self.block_input.pop();
+                        },
                         _ => {}
                     }
                 }

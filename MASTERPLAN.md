@@ -1,64 +1,55 @@
-# Bitcoin Node Terminal UI
+# Bitcoin Node Bridge - Masterplan
 
 ## Projektbeschreibung
-Eine Terminal-basierte Benutzeroberfläche für die Interaktion mit einem Bitcoin Node, die es ermöglicht, wichtige Node-Informationen zu überwachen und grundlegende Operationen auszuführen.
+Ein Terminal-basiertes UI-Tool zur Überwachung und Steuerung eines Bitcoin Nodes.
 
 ## Hauptziele
-1. Einfache Überwachung des Bitcoin Node Status
-2. Anzeige wichtiger Blockchain-Informationen
-3. Wallet-Management Funktionen
-4. Benutzerfreundliche Terminal-UI
-5. Effiziente Docker-Integration
+- [x] Verbindung zum lokalen Bitcoin Node
+- [x] Dashboard mit Node-Status
+- [x] Block-Explorer Funktionalität
+- [x] Block-Details mit Suche
+- [ ] Mempool-Analyse
+- [ ] Peer-Management
+- [ ] Mining-Statistiken
+- [ ] Sicherheits-Monitoring
 
 ## Technologie-Stack
-- Rust (Hauptprogrammiersprache)
-- Ratatui (Terminal UI Framework)
+- Rust (Core)
+- Ratatui (Terminal UI)
 - Bitcoin Core RPC
-- Docker für Containerisierung
-- Tokio für Async-Support
+- Crossterm (Terminal Control)
+- Anyhow (Error Handling)
+- Dotenv (Konfiguration)
 
 ## Anforderungen
-
 ### Funktional
-1. Node-Status Monitoring
-   - Verbindungsstatus
-   - Blockchain-Synchronisation
-   - Netzwerk-Informationen
+- [x] RPC-Verbindung zu Bitcoin Core
+- [x] Block-Informationen anzeigen
+- [x] Block-Suche (Höhe/Hash)
+- [ ] Transaktions-Details
+- [ ] Mempool-Statistiken
+- [ ] Peer-Verwaltung
 
-2. Wallet-Operationen
-   - Balance anzeigen
-   - Transaktionshistorie
-   - Basis Wallet-Funktionen
+### Nicht-Funktional
+- [x] Responsive Terminal UI
+- [x] Fehlerbehandlung
+- [x] Benutzerfreundliche Navigation
+- [x] Ausführliche Hilfe-Funktion
+- [ ] Performance-Optimierung
+- [ ] Konfigurations-Management
 
-3. Benutzeroberfläche
-   - Übersichtliches Layout
-   - Echtzeit-Updates
-   - Tastatursteuerung
+## Zeitplan
+1. Phase (Abgeschlossen):
+   - Basic UI-Framework
+   - Node-Verbindung
+   - Block-Explorer
 
-### Technisch
-1. Zuverlässige RPC-Kommunikation
-2. Effizientes Error-Handling
-3. Sichere Konfigurationsverwaltung
-4. Container-Kompatibilität
-5. Performante Aktualisierungen
+2. Phase (Aktuell):
+   - Mempool-Monitoring
+   - Peer-Management
+   - Mining-Statistiken
 
-## Zeitplan/Meilensteine
-1. Phase: Grundlegende Infrastruktur
-   - [x] Projekt-Setup
-   - [x] RPC-Verbindung
-   - [x] Basis UI-Framework
-
-2. Phase: Core-Funktionalität
-   - [ ] Node-Status Anzeige
-   - [ ] Wallet-Integration
-   - [ ] Benutzerinteraktion
-
-3. Phase: Erweiterungen
-   - [ ] Erweiterte Wallet-Funktionen
-   - [ ] Logging/Monitoring
-   - [ ] Performance-Optimierung
-
-4. Phase: Finalisierung
-   - [ ] Testing
-   - [ ] Dokumentation
-   - [ ] Release-Vorbereitung
+3. Phase (Geplant):
+   - Sicherheits-Features
+   - Konfigurations-UI
+   - Performance-Optimierung

@@ -1,8 +1,9 @@
 use super::common::*;
-use super::{components, help, tabs};
+use super::{components, help};
 use std::time::Duration;
-use crate::rpc::{MempoolInfo, NodeStatus};
+use crate::rpc::{BitcoinRPC, MempoolInfo, NodeStatus};
 use crate::ui::{StatusMessage, MessageLevel};
+use crate::ui::tabs::block_details::BlockSearchMode;
 use ratatui::prelude::Alignment;
 use ratatui::widgets::{Paragraph, Table};
 use super::tabs::{
@@ -34,6 +35,9 @@ pub fn draw_ui(
     mempool_info: &MempoolInfo,
     status_messages: &[StatusMessage],
     node_info: &NodeStatus,
+    rpc_client: &Option<BitcoinRPC>,
+    block_search_mode: &BlockSearchMode,
+    block_input_active: bool,
 ) {
     if !show_help {
         let chunks = Layout::default()
@@ -66,11 +70,28 @@ pub fn draw_ui(
                 mempool_size,
                 "",
             )),
-            Tab::BlockDetails => ContentWidget::Text(render_block_details(
-                height,
-                block_hash.to_string(),
-                timestamp,
-            )),
+            Tab::BlockDetails => {
+                match rpc_client {
+                    Some(client) => {
+                        let block_height = match block_search_mode {
+                            BlockSearchMode::Latest => node_info.height.to_string(),
+                            BlockSearchMode::Custom(ref input) => input.clone(),
+                        };
+                        
+                        match client.get_block_details(&block_height) {
+                            Ok(block_details) => ContentWidget::Text(render_block_details(
+                                &block_details,
+                                block_search_mode,
+                                block_input_active,
+                            )),
+                            Err(_) => ContentWidget::Text(Paragraph::new("Block konnte nicht gefunden werden")
+                                .style(Style::default().fg(Color::Red)))
+                        }
+                    },
+                    None => ContentWidget::Text(Paragraph::new("Keine Verbindung zum Bitcoin Node")
+                        .style(Style::default().fg(Color::Red)))
+                }
+            },
             Tab::Mempool => ContentWidget::Text(render_mempool(mempool_info)),
             Tab::Network => ContentWidget::Text(render_network(
                 connections,
@@ -109,13 +130,25 @@ pub fn draw_ui(
             f.render_widget(status, chunks[4]);
         }
     } else {
-        // Bildschirm komplett schwarz färben
+        // Erst alles löschen
         f.render_widget(Clear, f.size());
         
-        // Schwarzes Hintergrund-Widget für den Hilfe-Bereich
-        let area = centered_rect(80, 90, f.size());
+        // Dann den gesamten Bildschirm schwarz färben
         f.render_widget(
-            Block::default().style(Style::default().bg(Color::Black)),
+            Block::default()
+                .style(Style::default().bg(Color::Black))
+                .borders(Borders::NONE),
+            f.size()
+        );
+        
+        // Hilfe-Fenster-Bereich definieren
+        let area = centered_rect(80, 90, f.size());
+        
+        // Nochmal explizit den Hilfe-Bereich schwarz färben
+        f.render_widget(
+            Block::default()
+                .style(Style::default().bg(Color::Black))
+                .borders(Borders::NONE),
             area
         );
         

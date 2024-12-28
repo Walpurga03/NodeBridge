@@ -42,8 +42,11 @@ pub fn render(
         Line::from(vec![
             Span::styled("Difficulty: ", Style::default().fg(Color::Cyan)),
             Span::styled(
-                format!("{:.2e}", difficulty),
-                Style::default().fg(Color::White),
+                format!("{:.2e} ({})", 
+                    difficulty,
+                    (difficulty.round() as u64).to_formatted_string(&Locale::de)
+                ),
+                Style::default().fg(Color::White)
             ),
         ]),
         Line::from(vec![
@@ -94,6 +97,7 @@ pub fn render(
         Line::from(vec![
             Span::styled("💭 Mempool", 
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::raw(" (lokal)"),
         ]),
         Line::from(vec![
             Span::styled("Transaktionen: ", Style::default().fg(Color::Cyan)),

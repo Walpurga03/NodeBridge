@@ -1,7 +1,7 @@
 use crate::ui::common::*;
 use crate::rpc::PeerInfo;
 
-pub fn render(connections: u64, network: String, verification_progress: f64, peers: &[PeerInfo]) -> Paragraph<'static> {
+pub fn render(connections: u64, _network: String, verification_progress: f64, peers: &[PeerInfo]) -> Paragraph<'static> {
     Paragraph::new(vec![
         Line::from(vec![
             Span::styled("Netzwerk Status", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))

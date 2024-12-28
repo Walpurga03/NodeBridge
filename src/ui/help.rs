@@ -1,7 +1,10 @@
 // Für die Hilfe-Ansicht
 use super::common::*;
 use super::Tab;
-use ratatui::widgets::Wrap;
+use ratatui::{
+    widgets::{Wrap, BorderType},
+    prelude::Alignment,
+};
 
 pub fn create_help(tab: &Tab) -> Paragraph<'static> {
     let content = match tab {
@@ -11,72 +14,115 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Das Dashboard zeigt die wichtigsten Informationen über Ihren Bitcoin Node:"),
+            Line::from("Das Dashboard zeigt den aktuellen Status Ihres Bitcoin Nodes:"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("⚡ Netzwerk & Verbindungen", 
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" • Netzwerk: main/test/regtest - Zeigt das aktuelle Bitcoin-Netzwerk"),
-            Line::from(" • Peers: Anzahl der verbundenen Nodes (grün wenn >8 Verbindungen)"),
+            Line::from(" • Netzwerk: main/test/regtest/signet"),
+            Line::from(" • Peers: Verbundene Nodes (>8 empfohlen)"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("📦 Blockchain Status", 
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
             Line::from(" • Blöcke: Aktuelle Blockchain-Höhe"),
-            Line::from(" • Headers: Anzahl der bekannten Block-Header"),
-            Line::from(" • Difficulty: Aktuelle Mining-Schwierigkeit"),
-            Line::from(" • Chain Work: Kumulative Arbeit in der Blockchain (in Hex)"),
+            Line::from(" • Headers: Bekannte Block-Header"),
+            Line::from(" • Difficulty: Mining-Schwierigkeit (je höher, desto schwerer ist es einen Block zu finden)"),
+            Line::from("              Aktuelle Difficulty: ~108.52T = 108,522,647,629,298"),
+            Line::from(" • Chain Work: Gesamte Mining-Arbeit seit Genesis (Hexadezimal, beginnt mit vielen Nullen)"),
+            Line::from("              Format: 0x + 64 Stellen (je mehr Stellen ≠ 0 am Ende, desto mehr Arbeit wurde geleistet)"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("🔄 Synchronisation", 
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" • Status: Synchronisationsfortschritt in Prozent"),
-            Line::from(" • IBD: Initial Block Download Status"),
-            Line::from(" • Speicherplatz: Größe der Blockchain auf der Festplatte"),
-            Line::from(" • Pruned: Zeigt an, ob der Node im Pruning-Modus läuft"),
+            Line::from(" • Status: Fortschritt in % (grün = synchronisiert)"),
+            Line::from(" • IBD: Initial Block Download - Download der kompletten Blockchain"),
+            Line::from("        'Aktiv' = Node lädt noch Blöcke herunter"),
+            Line::from("        'Abgeschlossen' = Node ist auf aktuellem Stand"),
+            Line::from(" • Speicherplatz: Blockchain-Größe auf Festplatte"),
+            Line::from(" • Pruned: Reduzierte Blockchain-Größe aktiv?"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("💭 Mempool", 
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" • Transaktionen: Anzahl der unbestätigten Transaktionen"),
+            Line::from(" • Transaktionen: Unbestätigte TXs im lokalen Mempool"),
+            Line::from("                  (Kann von anderen Nodes/Websites abweichen,"),
+            Line::from("                   da jeder Node seinen eigenen Mempool hat)"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Tastenkombinationen:", 
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" • H: Diese Hilfe anzeigen/ausblenden"),
-            Line::from(" • 1-8: Direktauswahl der Tabs"),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • +/-: Update-Intervall anpassen"),
             Line::from(" • Q: Programm beenden"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Tab-Auswahl:", 
+                Span::styled("Navigation:", 
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" 1: Dashboard"),
-            Line::from(" 2: Block Details"),
-            Line::from(" 3: Mempool"),
-            Line::from(" 4: Netzwerk"),
-            Line::from(" 5: Peer Liste"),
-            Line::from(" 6: Mining"),
-            Line::from(" 7: Security"),
-            Line::from(" 8: Explorer"),
+            Line::from(" • 1-8: Tabs direkt auswählen"),
         ],
         Tab::BlockDetails => vec![
             Line::from(vec![
-                Span::styled("Block Details", Style::default().fg(Color::Yellow)),
+                Span::styled("Block Details", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from(" • Aktuelle Blockhöhe"),
-            Line::from(" • Block Hash"),
-            Line::from(" • Zeitstempel"),
+            Line::from(vec![
+                Span::styled("📦 Block Information", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Höhe: Position des Blocks in der Blockchain"),
+            Line::from(" • Hash: Eindeutige Block-ID (64 Zeichen)"),
+            Line::from(" • Zeit: Zeitstempel der Block-Erstellung (UTC)"),
             Line::from(""),
-            Line::from("Tastenkombinationen:"),
-            Line::from(" • H: Hilfe anzeigen/ausblenden"),
-            Line::from(" • 1-8: Direktauswahl der Tabs"),
+            Line::from(vec![
+                Span::styled("🔍 Block Details", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Transaktionen: Vom Miner ausgewählte TXs aus dem Mempool"),
+            Line::from("                  (Meist die mit den höchsten Gebühren)"),
+            Line::from(" • Größe: Maximale Blockgröße 4MB (Weight Units)"),
+            Line::from(" • Gewicht: Tatsächliche Nutzung der 4MB Kapazität"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔧 Technische Details", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Version: Protokoll-Version des Blocks"),
+            Line::from("          Definiert die gültigen Regeln für diesen Block"),
+            Line::from(" • Merkle Root: Kryptographische Zusammenfassung aller Transaktionen"),
+            Line::from("              Stellt sicher, dass keine Transaktion verändert wurde"),
+            Line::from(" • Bits: Zielwert für gültige Block-Hashes"),
+            Line::from("        - Ist wie eine 'Messlatte' für die Mining-Schwierigkeit"),
+            Line::from("        - Der Block-Hash muss unter diesem Wert liegen"),
+            Line::from("        - Wird alle 2 Wochen automatisch angepasst:"),
+            Line::from("          • Zu viele Blöcke = Bits wird kleiner (schwieriger)"),
+            Line::from("          • Zu wenige Blöcke = Bits wird größer (leichter)"),
+            Line::from(" • Nonce: Zufallszahl, die der Miner gefunden hat"),
+            Line::from("         Wird so lange verändert, bis ein gültiger Block entsteht"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔎 Block Suche", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Beim Start auswählen:"),
+            Line::from("   1) Aktueller Block"),
+            Line::from("   2) Block nach Höhe suchen"),
+            Line::from("   3) Block nach Hash suchen"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
             Line::from(" • Q: Programm beenden"),
         ],
         Tab::Mempool => vec![
@@ -184,7 +230,18 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
 
     Paragraph::new(content)
         .block(Block::default()
-            .title(" Hilfe ")
-            .borders(Borders::ALL))
+            .title(" ℹ️  Hilfe ")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL)
+            .border_style(Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD))
+            .border_type(BorderType::Double)
+            .style(Style::default()
+                .bg(Color::Black)))
+        .style(Style::default()
+            .fg(Color::White)
+            .bg(Color::Black))
+        .alignment(Alignment::Left)
         .wrap(Wrap { trim: true })
 } 

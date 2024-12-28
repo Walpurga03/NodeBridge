@@ -1,6 +1,8 @@
 use std::env;
 use std::time::{Duration, Instant};
+use std::str::FromStr;
 use bitcoincore_rpc::{Client, Auth, RpcApi};
+use bitcoincore_rpc::bitcoin::BlockHash;
 use dotenv::dotenv;
 use anyhow::Result;
 use hex;
@@ -49,6 +51,20 @@ pub struct PeerInfo {
     pub inbound: bool,
 }
 
+#[derive(Debug)]
+pub struct BlockDetails {
+    pub height: u64,
+    pub hash: String,
+    pub timestamp: i64,
+    pub tx_count: u64,
+    pub size: u64,
+    pub weight: u64,
+    pub version: u32,
+    pub merkle_root: String,
+    pub bits: String,
+    pub nonce: u32,
+}
+
 impl BitcoinRPC {
     pub fn new() -> anyhow::Result<Self> {
         dotenv().ok();
@@ -69,107 +85,105 @@ impl BitcoinRPC {
     }
 
     pub fn test_connection(&self) -> anyhow::Result<NodeStatus> {
-        let timeout = Duration::from_secs(5);
+        let timeout = Duration::from_secs(15);
         let start = Instant::now();
         
         let check_timeout = |start: Instant, timeout: Duration| -> Result<()> {
             if start.elapsed() > timeout {
-                return Err(anyhow::anyhow!("RPC Timeout nach {} Sekunden", timeout.as_secs()));
+                return Err(anyhow::anyhow!(
+                    "RPC Timeout nach {} Sekunden - Bitte prüfen Sie:\n• Bitcoin Core läuft\n• RPC ist aktiviert\n• Credentials sind korrekt", 
+                    timeout.as_secs()
+                ));
             }
             Ok(())
         };
 
-        // Alle RPC-Aufrufe mit Timeout prüfen
         check_timeout(start, timeout)?;
-        let version = self.client.version()? as u64;
+        match self.client.version() {
+            Ok(version) => {
+                let height = self.client.get_block_count()? as u64;
+                let block_hash = self.client.get_best_block_hash()?;
+                let block_info = self.client.get_block_header_info(&block_hash)?;
+                
+                let connections = self.client.get_connection_count().unwrap_or(0) as u64;
 
-        check_timeout(start, timeout)?;
-        let height = self.client.get_block_count()? as u64;
+                let difficulty = match self.client.get_difficulty() {
+                    Ok(diff) => diff,
+                    Err(_) => 0.0
+                };
 
-        check_timeout(start, timeout)?;
-        let block_hash = self.client.get_best_block_hash()?;
+                let chain_work = match self.client.get_block_header_info(&block_hash) {
+                    Ok(info) => {
+                        let hex_string = hex::encode(&info.chainwork);
+                        format!("0x{:0>64}", hex_string)
+                    },
+                    Err(_) => {
+                        "0x0000000000000000000000000000000000000000000000000000000000000000".to_string()
+                    }
+                };
 
-        check_timeout(start, timeout)?;
-        let block_info = self.client.get_block_header_info(&block_hash)?;
-        
-        // Verbindungen abrufen mit Fallback
-        let connections = self.client.get_connection_count().unwrap_or(0) as u64;
+                let (verification_progress, network, size_on_disk, pruned) = match self.client.call::<serde_json::Value>("getblockchaininfo", &[]) {
+                    Ok(info) => {
+                        let size = info.get("size_on_disk")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                            
+                        let network = info.get("chain")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+                            
+                        let progress = info.get("verificationprogress")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(1.0);
+                            
+                        let is_pruned = info.get("pruned")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                            
+                        (progress, network, size, is_pruned)
+                    },
+                    Err(_) => (
+                        1.0,
+                        "unknown".to_string(),
+                        0,
+                        false,
+                    )
+                };
 
-        // Difficulty direkt abrufen
-        let difficulty = match self.client.get_difficulty() {
-            Ok(diff) => diff,
-            Err(_) => 0.0
-        };
-
-        // Chain Work aus Block Header
-        let chain_work = match self.client.get_block_header_info(&block_hash) {
-            Ok(info) => {
-                let hex_string = hex::encode(&info.chainwork);
-                format!("0x{:0>64}", hex_string)
-            },
-            Err(_) => {
-                "0x0000000000000000000000000000000000000000000000000000000000000000".to_string()
-            }
-        };
-
-        // Blockchain Info mit allen Werten in einem Aufruf
-        let (verification_progress, network, size_on_disk, pruned) = match self.client.call::<serde_json::Value>("getblockchaininfo", &[]) {
-            Ok(info) => {
-                let size = info.get("size_on_disk")
-                    .and_then(|v| v.as_u64())
+                let mempool_size = self.client.get_mempool_info()
+                    .map(|info| info.size as u64)
                     .unwrap_or(0);
-                    
-                let network = info.get("chain")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                    
-                let progress = info.get("verificationprogress")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(1.0);
-                    
-                let is_pruned = info.get("pruned")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                    
-                (progress, network, size, is_pruned)
+
+                let mempool_info = self.get_mempool_info()?;
+
+                let peers = self.get_peer_info()?;
+
+                Ok(NodeStatus {
+                    version: version as u64,
+                    height,
+                    block_hash: block_hash.to_string(),
+                    timestamp: block_info.time as i64,
+                    connections,
+                    verification_progress,
+                    mempool_size,
+                    network,
+                    mempool_info,
+                    peers,
+                    difficulty,
+                    chain_work,
+                    initial_block_download: false,
+                    size_on_disk,
+                    pruned,
+                })
             },
-            Err(_) => (
-                1.0,
-                "unknown".to_string(),
-                0,
-                false,
-            )
-        };
-
-        // Mempool-Größe mit Fallback
-        let mempool_size = self.client.get_mempool_info()
-            .map(|info| info.size as u64)
-            .unwrap_or(0);
-
-        // Detaillierte Mempool-Informationen
-        let mempool_info = self.get_mempool_info()?;
-
-        // Peer-Informationen
-        let peers = self.get_peer_info()?;
-
-        Ok(NodeStatus {
-            version,
-            height,
-            block_hash: block_hash.to_string(),
-            timestamp: block_info.time as i64,
-            connections,
-            verification_progress,
-            mempool_size,
-            network,
-            mempool_info,
-            peers,
-            difficulty,
-            chain_work,
-            initial_block_download: false,
-            size_on_disk,          // Aktualisierter Speicherplatz
-            pruned,               // Aktualisierter Pruning-Status
-        })
+            Err(e) => {
+                Err(anyhow::anyhow!(
+                    "Verbindung fehlgeschlagen:\n• {}\n• Prüfen Sie die Einstellungen in .env", 
+                    e
+                ))
+            }
+        }
     }
 
     pub fn get_peer_info(&self) -> Result<Vec<PeerInfo>> {
@@ -195,5 +209,48 @@ impl BitcoinRPC {
         Ok(MempoolInfo {
             size: info.size as u64,
         })
+    }
+
+    pub fn get_block_details(&self, input: &str) -> Result<BlockDetails> {
+        // Prüfen ob Eingabe eine Zahl ist
+        if let Ok(height) = input.parse::<u64>() {
+            // Block nach Höhe suchen
+            let block_hash = self.client.get_block_hash(height)?;
+            let block = self.client.get_block_info(&block_hash)?;
+            
+            Ok(BlockDetails {
+                height,
+                hash: block_hash.to_string(),
+                timestamp: block.time as i64,
+                tx_count: block.tx.len() as u64,
+                size: block.size as u64,
+                weight: block.weight as u64,
+                version: block.version as u32,
+                merkle_root: block.merkleroot.to_string(),
+                bits: block.bits,
+                nonce: block.nonce,
+            })
+        } else {
+            // Block nach Hash suchen
+            let block_hash = BlockHash::from_str(input)?;
+            let block = self.client.get_block_info(&block_hash)?;
+            
+            // Block-Höhe über Block-Header ermitteln
+            let block_header = self.client.get_block_header_info(&block_hash)?;
+            let height = block_header.height as u64;
+            
+            Ok(BlockDetails {
+                height,
+                hash: block_hash.to_string(),
+                timestamp: block.time as i64,
+                tx_count: block.tx.len() as u64,
+                size: block.size as u64,
+                weight: block.weight as u64,
+                version: block.version as u32,
+                merkle_root: block.merkleroot.to_string(),
+                bits: block.bits,
+                nonce: block.nonce,
+            })
+        }
     }
 } 
