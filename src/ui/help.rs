@@ -127,18 +127,68 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
         ],
         Tab::Mempool => vec![
             Line::from(vec![
-                Span::styled("Mempool Status", Style::default().fg(Color::Yellow)),
+                Span::styled("Mempool Status", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Tastenbelegung:"),
-            Line::from(" [R] Aktualisieren"),
-            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(vec![
+                Span::styled("💭 Was ist der Mempool?", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Warteschlange für unbestätigte Bitcoin-Transaktionen"),
+            Line::from(" • Jeder Node hat seinen eigenen Mempool"),
+            Line::from(" • Miner wählen Transaktionen mit den höchsten Gebühren"),
             Line::from(""),
-            Line::from("Statistiken:"),
-            Line::from(" • Transaktionsanzahl und Größe"),
-            Line::from(" • Gebührenverteilung (sat/vB)"),
-            Line::from(" • Größenverteilung der Transaktionen"),
-            Line::from(" • Altersverteilung im Mempool"),
+            Line::from(vec![
+                Span::styled("📊 Gebühren-Kategorien", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • No Priority     : Sehr lange Wartezeit (mehrere Tage/Wochen)"),
+            Line::from(" • Low Priority    : Längere Wartezeit (~1 Tag)"),
+            Line::from(" • Medium Priority : Mittlere Wartezeit (~6 Stunden)"),
+            Line::from(" • High Priority   : Schnelle Bestätigung (~20-30 Minuten)"),
+            Line::from(""),
+            Line::from(" Die sat/vB Werte passen sich dynamisch an die Netzwerkauslastung an."),
+            Line::from(" Höhere Auslastung = höhere Gebühren für schnelle Bestätigung."),
+            Line::from(""),
+            Line::from(" sat/vB = Satoshi pro virtuellem Byte (Transaktionsgröße)"),
+            Line::from(" $-Preis basiert auf einer Standard-TX (250 vBytes)"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("💾 Speicher-Management", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Aktuell: Momentane Größe des Mempools in MB"),
+            Line::from(" • Maximum: Speicherlimit des Mempools (standard: 300 MB)"),
+            Line::from("            Wenn voll: Neue TX verdrängt alte TX mit niedrigerer Gebühr"),
+            Line::from("            Dies stellt sicher, dass immer die wertvollsten TXs behalten werden"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔄 Aktualisierung", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Automatisch alle 30 Sekunden"),
+            Line::from(" • Manuell mit [R] Taste"),
+            Line::from(" • 🔄 zeigt aktive Aktualisierung an"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Hinweise:", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Gebühren werden vom Node geschätzt"),
+            Line::from(" • Schätzungen basieren auf:"),
+            Line::from("   - Aktuellem Mempool"),
+            Line::from("   - Historischen Daten"),
+            Line::from("   - Netzwerkaktivität"),
+            Line::from(" • Aktualisierung kann einige Sekunden dauern"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
         Tab::Network => vec![
             Line::from(vec![

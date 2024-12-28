@@ -8,6 +8,12 @@ use anyhow::Result;
 use hex;
 use serde_json;
 
+// Re-export wichtiger Typen
+pub use self::mempool::MempoolStats;
+
+// Module
+mod mempool;
+
 pub struct BitcoinRPC {
     client: Client,
 }

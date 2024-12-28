@@ -92,7 +92,19 @@ pub fn draw_ui(
                         .style(Style::default().fg(Color::Red)))
                 }
             },
-            Tab::Mempool => ContentWidget::Text(render_mempool(mempool_info)),
+            Tab::Mempool => {
+                match rpc_client {
+                    Some(client) => {
+                        match client.get_mempool_stats() {
+                            Ok(stats) => ContentWidget::Text(render_mempool(&stats, is_updating)),
+                            Err(_) => ContentWidget::Text(Paragraph::new("Mempool-Daten konnten nicht geladen werden")
+                                .style(Style::default().fg(Color::Red)))
+                        }
+                    },
+                    None => ContentWidget::Text(Paragraph::new("Keine Verbindung zum Bitcoin Node")
+                        .style(Style::default().fg(Color::Red)))
+                }
+            },
             Tab::Network => ContentWidget::Text(render_network(
                 connections,
                 network.to_string(),
