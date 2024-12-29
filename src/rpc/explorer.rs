@@ -1,33 +1,13 @@
-use super::BitcoinRPC;
-use serde_json::Value;
 use anyhow::Result;
+use bitcoincore_rpc::{RpcApi, bitcoin::Txid};
+use serde_json::Value;
+use std::str::FromStr;
 
-impl BitcoinRPC {
-    pub fn get_block_by_height(&self, height: u64) -> Result<Value> {
-        // Erst Block-Hash holen
-        let block_hash: String = self.call("getblockhash", vec![height.into()])?;
-        // Dann Block-Details
-        self.get_block_by_hash(&block_hash)
-    }
-
-    pub fn get_block_by_hash(&self, hash: &str) -> Result<Value> {
-        self.call("getblock", vec![hash.into(), 2.into()])
-    }
-
-    pub fn get_transaction(&self, txid: &str) -> Result<Value> {
-        self.call("getrawtransaction", vec![txid.into(), true.into()])
-    }
-
-    pub fn get_address_info(&self, address: &str) -> Result<Value> {
-        // Mehrere Calls kombinieren für Adress-Informationen
-        let script_hash: String = self.call("getaddressinfo", vec![address.into()])?;
-        let utxos: Vec<Value> = self.call("scantxoutset", vec!["start".into(), format!("addr({})", address).into()])?;
+impl super::BitcoinRPC {
+    pub fn get_explorer_transaction(&self, txid: &str) -> Result<Value> {
+        let tx_id = Txid::from_str(txid)?;
         
-        // Ergebnisse kombinieren...
-        Ok(json!({
-            "address": address,
-            "script_hash": script_hash,
-            "utxos": utxos,
-        }))
+        let tx_info = self.client.get_raw_transaction_info(&tx_id, None)?;
+        Ok(serde_json::to_value(tx_info)?)
     }
 } 

@@ -2,7 +2,6 @@ use anyhow::Result;
 use bitcoincore_rpc::RpcApi;
 use serde_json::Value;
 use std::time::{Instant, Duration};
-use rayon::prelude::*;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 

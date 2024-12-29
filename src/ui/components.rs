@@ -21,53 +21,56 @@ pub fn create_header(version: u64) -> Paragraph<'static> {
 pub fn create_footer(update_interval: Duration, is_updating: bool, spinner_state: usize) -> Paragraph<'static> {
     let spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     
-    let update_text = if is_updating {
+    let status_text = if is_updating {
         format!("{} Aktualisiere...", spinner[spinner_state])
     } else {
-        format!("Update alle {}s", update_interval.as_secs())
+        format!("Letzte Aktualisierung: vor {}s", update_interval.as_secs())
     };
 
-    Paragraph::new(Line::from(vec![
-        Span::styled("[H]", Style::default().fg(Color::Yellow)),
-        Span::raw(" Hilfe | "),
-        Span::styled("[R]", Style::default().fg(Color::Yellow)),
-        Span::raw(" Aktualisieren | "),
-        Span::styled("[Q]", Style::default().fg(Color::Yellow)),
-        Span::raw(" Beenden | "),
-        Span::styled(update_text, Style::default().fg(Color::Blue)),
-    ]))
+    Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled("H", Style::default().fg(Color::Yellow)),
+            Span::raw(": Hilfe | "),
+            Span::styled("Q", Style::default().fg(Color::Yellow)),
+            Span::raw(": Beenden | "),
+            Span::styled(status_text, Style::default().fg(Color::Blue))
+        ])
+    ])
     .alignment(Alignment::Center)
+    .block(Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::DarkGray)))
 }
 
 pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {
     let titles = vec![
         "Dashboard",
         "Block Details",
+        "TX Details",
+        "Address Details",
         "Mempool",
-        "Netzwerk",
-        "Peer Liste",
+        "Network",
+        "Peer List",
         "Mining",
         "Security",
-        "Explorer",
     ];
-
+    
     let tabs = titles.iter().map(|t| {
-        Line::from(vec![
-            Span::raw(*t)
-        ])
+        Line::from(Span::styled(*t, Style::default().fg(Color::White)))
     }).collect();
 
     Tabs::new(tabs)
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default().borders(Borders::ALL).title(" Navigation "))
         .select(match current_tab {
             Tab::Dashboard => 0,
             Tab::BlockDetails => 1,
-            Tab::Mempool => 2,
-            Tab::Network => 3,
-            Tab::PeerList => 4,
-            Tab::Mining => 5,
-            Tab::Security => 6,
-            Tab::Explorer => 7,
+            Tab::TxDetails => 2,
+            Tab::AddressDetails => 3,
+            Tab::Mempool => 4,
+            Tab::Network => 5,
+            Tab::PeerList => 6,
+            Tab::Mining => 7,
+            Tab::Security => 8,
         })
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default()

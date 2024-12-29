@@ -416,22 +416,112 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
             Line::from(" • R: Daten aktualisieren"),
             Line::from(" • Q: Programm beenden"),
         ],
-        Tab::Explorer => vec![
+        Tab::TxDetails => vec![
             Line::from(vec![
-                Span::styled("Blockchain Explorer", Style::default().fg(Color::Yellow)),
+                Span::styled("Transaction Details", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Tastenbelegung:"),
-            Line::from(" [B] Block suchen"),
-            Line::from(" [T] Transaktion suchen"),
-            Line::from(" [A] Adresse suchen"),
-            Line::from(" [Enter] Suche ausführen"),
-            Line::from(" [Esc] Suche abbrechen"),
+            Line::from(vec![
+                Span::styled("📋 Informationen", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • TXID: Eindeutige Transaktions-ID (64 Zeichen Hex)"),
             Line::from(""),
-            Line::from("Suchoptionen:"),
-            Line::from(" • Block: Höhe oder Hash"),
-            Line::from(" • Transaktion: TXID"),
-            Line::from(" • Adresse: Base58 oder Bech32"),
+            Line::from(vec![
+                Span::styled("💰 Inputs & Outputs", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Inputs: Vorherige Transaktionen, die als Quelle dienen"),
+            Line::from("   - Zeigt die TXIDs der Quell-Transaktionen"),
+            Line::from("   - Jeder Input verweist auf einen früheren Output"),
+            Line::from(""),
+            Line::from(" • Outputs: Empfänger und gesendete Beträge"),
+            Line::from("   - Zeigt Betrag in BTC und Empfänger-Adresse"),
+            Line::from("   - Format: [Betrag] BTC → [Adresse]"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔧 Technische Details", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Größe: Tatsächliche Größe in Bytes"),
+            Line::from("   - Wie viel Speicherplatz die Transaktion benötigt"),
+            Line::from("   - Je größer, desto höhere Transaktionsgebühren"),
+            Line::from("   - Typische Größen: 200-500 Bytes für einfache TX"),
+            Line::from(""),
+            Line::from(" • Gewicht (Weight Units / WU):"),
+            Line::from("   - Ein Maß für die 'Schwere' der Transaktion"),
+            Line::from("   - Neueres System für fairere Gebührenberechnung"),
+            Line::from("   - SegWit-Transaktionen sparen Gebühren"),
+            Line::from("   - Typische Werte: 800-2000 WU für normale TX"),
+            Line::from(""),
+            Line::from(" • Zeit: Wann wurde die Transaktion verarbeitet?"),
+            Line::from("   - Zeitpunkt der ersten Bestätigung im Netzwerk"),
+            Line::from("   - Wichtig für die chronologische Reihenfolge"),
+            Line::from(""),
+            Line::from(" • Block: In welchem Block ist die TX gespeichert?"),
+            Line::from("   - Jeder Block hat eine eindeutige Block-Hash"),
+            Line::from("   - Zeigt, wann die TX endgültig bestätigt wurde"),
+            Line::from("   - Je mehr Blöcke danach, desto sicherer"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
+        ],
+        Tab::AddressDetails => vec![
+            Line::from(vec![
+                Span::styled("Address Details", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("📋 Informationen", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Adresse: Bitcoin-Adresse oder Public Key"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔍 Adresstypen", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Native SegWit (bc1...)"),
+            Line::from("   - Neuester Standard"),
+            Line::from("   - Niedrigste Gebühren"),
+            Line::from("   - Beginnt mit 'bc1'"),
+            Line::from(""),
+            Line::from(" • Nested SegWit (3...)"),
+            Line::from("   - Kompatibilitätsformat"),
+            Line::from("   - Mittlere Gebühren"),
+            Line::from("   - Beginnt mit '3'"),
+            Line::from(""),
+            Line::from(" • Legacy (1...)"),
+            Line::from("   - Ursprüngliches Format"),
+            Line::from("   - Höchste Gebühren"),
+            Line::from("   - Beginnt mit '1'"),
+            Line::from(""),
+            Line::from(" • Public Key (Hex)"),
+            Line::from("   - 130 Zeichen hexadezimal"),
+            Line::from("   - Wird für spezielle Anwendungen verwendet"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("💰 Details", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Balance: Aktuelles Guthaben in BTC"),
+            Line::from(" • Transaktionen: Anzahl aller Transaktionen"),
+            Line::from(" • Script: Technische Details zum Adresstyp"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
     };
 

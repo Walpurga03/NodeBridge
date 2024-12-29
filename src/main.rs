@@ -22,35 +22,66 @@ fn main() -> Result<()> {
     println!("Bitcoin Node Terminal UI");
     println!("----------------------");
     println!("\nBitte wählen Sie:");
-    println!("1) Aktueller Block");
-    println!("2) Block nach Höhe suchen");
-    println!("3) Block nach Hash suchen");
-    print!("\nAuswahl (1-3): ");
+    println!("1) Block suchen (Standard: Aktueller Block)");
+    println!("2) Transaktion suchen (Standard: Standard TX)");
+    println!("3) Adresse suchen (Standard: Standard-Adresse)");
+    print!("\nAuswahl (1-3) oder [Enter] für alle Standardwerte: ");
     io::stdout().flush()?;
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
-    let block_search_mode = match input.trim() {
-        "2" => {
-            print!("Block-Höhe eingeben: ");
+    // Separate Variablen für Block und Explorer
+    let (block_mode, tx_id, addr) = match input.trim() {
+        "1" => {
+            print!("Block-Höhe oder Hash eingeben (oder [Enter] für aktuellen Block): ");
             io::stdout().flush()?;
-            let mut height = String::new();
-            io::stdin().read_line(&mut height)?;
-            BlockSearchMode::Custom(height.trim().to_string())
+            let mut block = String::new();
+            io::stdin().read_line(&mut block)?;
+            if block.trim().is_empty() {
+                (BlockSearchMode::Latest, None, None)
+            } else {
+                (BlockSearchMode::Custom(block.trim().to_string()), None, None)
+            }
+        },
+        "2" => {
+            print!("Transaktions-ID eingeben (oder [Enter] für Standard TX): ");
+            io::stdout().flush()?;
+            let mut txid = String::new();
+            io::stdin().read_line(&mut txid)?;
+            let txid = txid.trim();
+            if txid.is_empty() {
+                (BlockSearchMode::Latest, 
+                 Some("b8ba9eb64978b378e7b03e25d14062c10ea844a284d87552c808ab4f4365c958".into()), 
+                 None)
+            } else {
+                (BlockSearchMode::Latest, Some(txid.to_string()), None)
+            }
         },
         "3" => {
-            print!("Block-Hash eingeben: ");
+            print!("Bitcoin-Adresse eingeben (oder [Enter] für Standard-Adresse): ");
             io::stdout().flush()?;
-            let mut hash = String::new();
-            io::stdin().read_line(&mut hash)?;
-            BlockSearchMode::Custom(hash.trim().to_string())
+            let mut addr = String::new();
+            io::stdin().read_line(&mut addr)?;
+            let addr = addr.trim();
+            if addr.is_empty() {
+                (BlockSearchMode::Latest, None, 
+                 Some("bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd".into()))
+            } else {
+                (BlockSearchMode::Latest, None, Some(addr.to_string()))
+            }
         },
-        _ => BlockSearchMode::Latest
+        "" => {
+            // Bei [Enter] alle Standardwerte verwenden
+            (BlockSearchMode::Latest, 
+             Some("b8ba9eb64978b378e7b03e25d14062c10ea844a284d87552c808ab4f4365c958".into()),
+             Some("bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd".into()))
+        },
+        _ => (BlockSearchMode::Latest, None, None)
     };
 
-    // Jetzt erst das TUI starten
-    let mut ui = UI::new(block_search_mode)?;
+    // UI mit beiden Modi starten
+    let mut ui = UI::new(block_mode, tx_id, addr)?;
     
     // Terminal sofort initialisieren
     enable_raw_mode()?;

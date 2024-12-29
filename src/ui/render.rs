@@ -9,9 +9,11 @@ use ratatui::widgets::{Paragraph, Table};
 use super::tabs::{
     render_node_info, render_block_details, render_mempool,
     render_network, render_peer_list, render_mining,
-    render_security, render_explorer
+    render_security, render_tx_details, render_address_details
 };
 use crate::ui::tabs::security::{SecurityStatus, RPCStatus};
+use crate::ui::tabs::tx_details::TxMode;
+use crate::ui::tabs::address_details::AddressMode;
 
 enum ContentWidget<'a> {
     Text(Paragraph<'a>),
@@ -24,8 +26,8 @@ pub fn draw_ui(
     show_help: bool,
     version: u64,
     height: u64,
-    block_hash: &str,
-    timestamp: i64,
+    _block_hash: &str,
+    _timestamp: i64,
     connections: u64,
     verification_progress: f64,
     mempool_size: u64,
@@ -33,12 +35,14 @@ pub fn draw_ui(
     update_interval: Duration,
     is_updating: bool,
     spinner_state: usize,
-    mempool_info: &MempoolInfo,
+    _mempool_info: &MempoolInfo,
     status_messages: &[StatusMessage],
     node_info: &NodeStatus,
     rpc_client: &Option<BitcoinRPC>,
     block_search_mode: &BlockSearchMode,
     block_input_active: bool,
+    tx_mode: &Option<TxMode>,
+    address_mode: &Option<AddressMode>,
 ) {
     if !show_help {
         let chunks = Layout::default()
@@ -142,7 +146,8 @@ pub fn draw_ui(
                 };
                 ContentWidget::Text(render_security(&security_status))
             },
-            Tab::Explorer => ContentWidget::Text(render_explorer()),
+            Tab::TxDetails => ContentWidget::Text(render_tx_details(tx_mode.as_ref(), rpc_client)),
+            Tab::AddressDetails => ContentWidget::Text(render_address_details(address_mode.as_ref(), rpc_client)),
         };
         let footer = components::create_footer(update_interval, is_updating, spinner_state);
 

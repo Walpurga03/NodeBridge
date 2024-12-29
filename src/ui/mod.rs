@@ -20,6 +20,8 @@ use ratatui::{
 };
 use crate::rpc::{BitcoinRPC, NodeStatus};
 pub use crate::ui::tabs::block_details::BlockSearchMode;
+use crate::ui::tabs::tx_details::TxMode;
+use crate::ui::tabs::address_details::AddressMode;
 
 pub(crate) use common::*;
 
@@ -27,29 +29,34 @@ pub(crate) use common::*;
 pub enum Tab {
     Dashboard,
     BlockDetails,
+    TxDetails,
+    AddressDetails,
     Mempool,
     Network,
     PeerList,
     Mining,
     Security,
-    Explorer,
 }
 
 pub struct UI {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
-    rpc_client: Option<BitcoinRPC>,
-    node_info: Option<NodeStatus>,
-    last_update: Instant,
-    update_interval: Duration,
     current_tab: Tab,
     show_help: bool,
+    update_interval: Duration,
+    last_update: Instant,
     is_updating: bool,
     spinner_state: usize,
+    rpc_client: Option<BitcoinRPC>,
+    node_info: Option<NodeStatus>,
     connection_state: ConnectionState,
     status_messages: Vec<StatusMessage>,
     block_input_active: bool,
     block_input: String,
     block_search_mode: BlockSearchMode,
+    tx_mode: Option<TxMode>,
+    address_mode: Option<AddressMode>,
+    input: Option<String>,
+    last_status_time: Instant,
 }
 
 #[derive(Clone)]
@@ -63,11 +70,14 @@ pub struct StatusMessage {
 pub enum MessageLevel {
     Info,
     Warning,
+    #[allow(dead_code)]
     Error,
 }
 
 impl UI {
-    pub fn new(initial_block_mode: BlockSearchMode) -> anyhow::Result<Self> {
+    pub fn new(initial_block_mode: BlockSearchMode, 
+               initial_tx: Option<String>,
+               initial_addr: Option<String>) -> anyhow::Result<Self> {
         // Terminal in Raw-Mode versetzen
         enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -90,6 +100,12 @@ impl UI {
             block_input_active: false,
             block_input: String::new(),
             block_search_mode: initial_block_mode,
+            tx_mode: initial_tx.or(Some("bcac1259b3faf4d01f8f0d99d5340576f197553a899e058ea3833fe5f82e0345".to_string()))
+                .map(|txid| TxMode { txid }),
+            address_mode: initial_addr.or(Some("bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd".to_string()))
+                .map(|address| AddressMode { address }),
+            input: None,
+            last_status_time: Instant::now(),
         })
     }
 
@@ -183,6 +199,8 @@ impl UI {
                                 &self.rpc_client,
                                 &self.block_search_mode,
                                 self.block_input_active,
+                                &self.tx_mode,
+                                &self.address_mode,
                             )
                         }
                     }
@@ -212,12 +230,13 @@ impl UI {
                         KeyCode::Char('-') => self.decrease_update_interval(),
                         KeyCode::Char('1') => self.current_tab = Tab::Dashboard,
                         KeyCode::Char('2') => self.current_tab = Tab::BlockDetails,
-                        KeyCode::Char('3') => self.current_tab = Tab::Mempool,
-                        KeyCode::Char('4') => self.current_tab = Tab::Network,
-                        KeyCode::Char('5') => self.current_tab = Tab::PeerList,
-                        KeyCode::Char('6') => self.current_tab = Tab::Mining,
-                        KeyCode::Char('7') => self.current_tab = Tab::Security,
-                        KeyCode::Char('8') => self.current_tab = Tab::Explorer,
+                        KeyCode::Char('3') => self.current_tab = Tab::TxDetails,
+                        KeyCode::Char('4') => self.current_tab = Tab::AddressDetails,
+                        KeyCode::Char('5') => self.current_tab = Tab::Mempool,
+                        KeyCode::Char('6') => self.current_tab = Tab::Network,
+                        KeyCode::Char('7') => self.current_tab = Tab::PeerList,
+                        KeyCode::Char('8') => self.current_tab = Tab::Mining,
+                        KeyCode::Char('9') => self.current_tab = Tab::Security,
                         KeyCode::Enter if self.current_tab == Tab::BlockDetails => {
                             if self.block_input_active {
                                 if !self.block_input.is_empty() {
