@@ -167,7 +167,6 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
                 Span::styled("🔄 Aktualisierung", 
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
-            Line::from(" • Automatisch alle 30 Sekunden"),
             Line::from(" • Manuell mit [R] Taste"),
             Line::from(" • 🔄 zeigt aktive Aktualisierung an"),
             Line::from(""),
@@ -192,72 +191,230 @@ pub fn create_help(tab: &Tab) -> Paragraph<'static> {
         ],
         Tab::Network => vec![
             Line::from(vec![
-                Span::styled("Netzwerk & Peers", Style::default().fg(Color::Yellow)),
+                Span::styled("Netzwerk & Peers", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Tastenbelegung:"),
-            Line::from(" [R] Aktualisieren"),
-            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(vec![
+                Span::styled("⚡ Netzwerk Status", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Netzwerk: main = Mainnet, test = Testnet"),
+            Line::from(" • Synchronisation: Fortschritt des Block-Downloads"),
             Line::from(""),
-            Line::from("Verbindungen:"),
-            Line::from(" • Gesamtzahl und Onion-Anteil"),
-            Line::from(" • Beste/Schlechteste Latenz"),
+            Line::from(vec![
+                Span::styled("🔌 Verbindungen", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Gesamt: Anzahl aller Verbindungen (mindestens 8 empfohlen)"),
+            Line::from(" • Eingehend: Andere Nodes verbinden sich zu uns"),
+            Line::from(" • Ausgehend: Wir verbinden uns zu anderen Nodes"),
+            Line::from(" • Tor: Verbindungen über das Tor-Netzwerk (Privatsphäre)"),
             Line::from(""),
-            Line::from("Latenz-Werte:"),
             Line::from(vec![
-                Span::raw(" • "),
-                Span::styled("< 100ms", Style::default().fg(Color::Green)),
-                Span::raw(" = sehr gut"),
+                Span::styled("📊 Latenz-Werte", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
             ]),
             Line::from(vec![
                 Span::raw(" • "),
-                Span::styled("100-500ms", Style::default().fg(Color::Yellow)),
-                Span::raw(" = normal"),
+                Span::styled("Grün", Style::default().fg(Color::Green)),
+                Span::raw(" < 100ms = Sehr gute Verbindung"),
             ]),
             Line::from(vec![
                 Span::raw(" • "),
-                Span::styled("> 500ms", Style::default().fg(Color::Red)),
-                Span::raw(" = langsam"),
+                Span::styled("Gelb", Style::default().fg(Color::Yellow)),
+                Span::raw(" 100-500ms = Normale Verbindung"),
             ]),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("Rot", Style::default().fg(Color::Red)),
+                Span::raw(" > 500ms = Langsame Verbindung"),
+            ]),
+            Line::from(""),
+            Line::from(" Die Latenz zeigt die Reaktionszeit der Verbindungen:"),
+            Line::from(" • Minimum = Schnellste Verbindung"),
+            Line::from(" • Maximum = Langsamste Verbindung"),
+            Line::from(" • Durchschnitt = Mittlere Geschwindigkeit aller Verbindungen"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
         Tab::PeerList => vec![
             Line::from(vec![
-                Span::styled("Peer Liste", Style::default().fg(Color::Yellow)),
+                Span::styled("Peer Liste", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from(" • Liste aller verbundenen Peers"),
-            Line::from(" • Sortiert nach Latenz"),
-            Line::from(" • Onion/Clearnet Status"),
+            Line::from(vec![
+                Span::styled("📋 Spalten-Erklärung", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Adresse: IP oder .onion Adresse des Peers"),
+            Line::from("   - 🧅 = Tor-Verbindung (anonym)"),
+            Line::from("   - IP = Direkte Verbindung"),
+            Line::from(""),
+            Line::from(" • Version: Bitcoin Client und Version des Peers"),
+            Line::from("   z.B. /Satoshi:25.0.0/ = Bitcoin Core v25.0.0"),
+            Line::from(""),
+            Line::from(" • Latenz: Reaktionszeit der Verbindung"),
+            Line::from(vec![
+                Span::raw("   - "),
+                Span::styled("Grün", Style::default().fg(Color::Green)),
+                Span::raw(" < 100ms: Sehr schnell"),
+            ]),
+            Line::from(vec![
+                Span::raw("   - "),
+                Span::styled("Gelb", Style::default().fg(Color::Yellow)),
+                Span::raw(" 100-500ms: Normal"),
+            ]),
+            Line::from(vec![
+                Span::raw("   - "),
+                Span::styled("Rot", Style::default().fg(Color::Red)),
+                Span::raw(" > 500ms: Langsam"),
+            ]),
+            Line::from(""),
+            Line::from(" • Verbunden: Zeit seit Verbindungsaufbau"),
+            Line::from("   - d = Tage"),
+            Line::from("   - h = Stunden"),
+            Line::from("   - m = Minuten"),
+            Line::from(""),
+            Line::from(" • Senden/Empfangen: Datenübertragung in MB"),
+            Line::from("   - Links: Gesendete Daten"),
+            Line::from("   - Rechts: Empfangene Daten"),
+            Line::from(""),
+            Line::from(" • Typ: Art der Verbindung"),
+            Line::from("   - Eingehend: Peer hat sich mit uns verbunden"),
+            Line::from("   - Ausgehend: Wir haben uns mit Peer verbunden"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("ℹ️  Hinweise", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Liste ist nach Latenz sortiert (schnellste zuerst)"),
+            Line::from(" • Ausgewogene Mischung aus Ein-/Ausgehend ist optimal"),
+            Line::from(" • Mehrere Tor-Verbindungen erhöhen die Privatsphäre"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
         Tab::Mining => vec![
             Line::from(vec![
-                Span::styled("Mining Status", Style::default().fg(Color::Yellow)),
+                Span::styled("Mining Status", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Tastenbelegung:"),
-            Line::from(" [R] Aktualisieren"),
-            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(vec![
+                Span::styled("📊 Difficulty", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Schwierigkeitsgrad für das Mining"),
+            Line::from(" • Wissenschaftliche Notation (z.B. 5.3e13)"),
+            Line::from(" • Dezimaldarstellung zum Vergleich"),
             Line::from(""),
-            Line::from("Informationen:"),
-            Line::from(" • Aktuelle Difficulty"),
-            Line::from(" • Netzwerk-Hashrate"),
-            Line::from(" • Zeit bis Difficulty-Anpassung"),
-            Line::from(" • Mining-Pool Verteilung"),
+            Line::from(vec![
+                Span::styled("🔄 Difficulty-Anpassung", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Findet alle 2016 Blöcke statt (~2 Wochen)"),
+            Line::from(" • Ziel: 1 Block alle 10 Minuten"),
+            Line::from(" • Grün = wird leichter"),
+            Line::from(" • Rot = wird schwerer"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("⚡ Hashrate", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Rechenleistung des gesamten Netzwerks"),
+            Line::from(" • Einheiten:"),
+            Line::from("   - EH/s = Exa-Hashes pro Sekunde (10¹⁸)"),
+            Line::from("   - PH/s = Peta-Hashes pro Sekunde (10¹⁵)"),
+            Line::from("   - TH/s = Tera-Hashes pro Sekunde (10¹²)"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
         Tab::Security => vec![
             Line::from(vec![
-                Span::styled("Sicherheitsstatus", Style::default().fg(Color::Yellow)),
+                Span::styled("Sicherheitsstatus", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
             ]),
             Line::from(""),
-            Line::from("Tastenbelegung:"),
-            Line::from(" [R] Aktualisieren"),
-            Line::from(" [H] Hilfe ausblenden"),
+            Line::from(vec![
+                Span::styled("📦 Software", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Version: Aktuelle Bitcoin Core Version"),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("Grün", Style::default().fg(Color::Green)),
+                Span::raw(" = Aktuell, "),
+                Span::styled("Rot", Style::default().fg(Color::Red)),
+                Span::raw(" = Update verfügbar"),
+            ]),
             Line::from(""),
-            Line::from("Überwachung:"),
-            Line::from(" • Softwareversion-Check"),
-            Line::from(" • Peer-Verbindungssicherheit"),
-            Line::from(" • Firewall-Status"),
-            Line::from(" • Tor-Verbindungsqualität"),
+            Line::from(vec![
+                Span::styled("🔌 Netzwerk", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Verbindungen: Verhältnis Tor zu direkten Verbindungen"),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("Grün", Style::default().fg(Color::Green)),
+                Span::raw(" = Mehr Tor als direkte Verbindungen (besser für Privatsphäre)"),
+            ]),
+            Line::from(" • Firewall: Schutz vor unerwünschten Verbindungen"),
+            Line::from(" • Tor: Anonymes Routing für mehr Privatsphäre"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("🔐 Zugriffskontrolle", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • RPC Zugriff: API-Zugriffsbeschränkungen"),
+            Line::from("   - IP-Beschränkung"),
+            Line::from("   - SSL/TLS Verschlüsselung"),
+            Line::from("   - Benutzer-Authentifizierung"),
+            Line::from("   - Befehlseinschränkungen"),
+            Line::from(" • Wallet: Verschlüsselung der Wallet-Datei"),
+            Line::from(" • Festplatte: System-Verschlüsselung"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("⏰ System", 
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • Uptime: Laufzeit seit letztem Neustart"),
+            Line::from(" • Backup: Status der Wallet-Sicherung"),
+            Line::from(vec![
+                Span::raw(" • "),
+                Span::styled("Grün", Style::default().fg(Color::Green)),
+                Span::raw(" = < 7 Tage, "),
+                Span::styled("Gelb", Style::default().fg(Color::Yellow)),
+                Span::raw(" = > 7 Tage, "),
+                Span::styled("Rot", Style::default().fg(Color::Red)),
+                Span::raw(" = Kein Backup"),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Tastenkombinationen:", 
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            ]),
+            Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+            Line::from(" • R: Daten aktualisieren"),
+            Line::from(" • Q: Programm beenden"),
         ],
         Tab::Explorer => vec![
             Line::from(vec![

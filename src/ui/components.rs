@@ -2,6 +2,7 @@
 use super::common::*;
 use std::time::Duration;
 use ratatui::widgets::Tabs;
+use ratatui::prelude::Alignment;
 
 pub fn create_header(version: u64) -> Paragraph<'static> {
     let version_str = format!("Bitcoin Core v{}.{}.{}",
@@ -17,42 +18,25 @@ pub fn create_header(version: u64) -> Paragraph<'static> {
             .title(" Node Info "))
 }
 
-pub fn create_footer(
-    update_interval: Duration,
-    is_updating: bool,
-    spinner_state: usize,
-) -> Paragraph<'static> {
-    const SPINNER: [&str; 4] = ["⠋", "⠙", "⠹", "⠸"];
+pub fn create_footer(update_interval: Duration, is_updating: bool, spinner_state: usize) -> Paragraph<'static> {
+    let spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     
-    let update_status = if is_updating {
-        format!("{} Aktualisiere...", SPINNER[spinner_state])
+    let update_text = if is_updating {
+        format!("{} Aktualisiere...", spinner[spinner_state])
     } else {
-        String::from("✓ Bereit")
+        format!("Update alle {}s", update_interval.as_secs())
     };
 
-    let content = vec![
-        Line::from(vec![
-            Span::raw(" ["),
-            Span::styled("Q", Style::default().fg(Color::Yellow)),
-            Span::raw("] Beenden | ["),
-            Span::styled("R", Style::default().fg(Color::Yellow)),
-            Span::raw("] Aktualisieren | ["),
-            Span::styled("H", Style::default().fg(Color::Yellow)),
-            Span::raw("] Hilfe | ["),
-            Span::styled("+/-", Style::default().fg(Color::Yellow)),
-            Span::raw(format!("] Update-Intervall: {}s | ", update_interval.as_secs())),
-            Span::styled(
-                update_status,
-                Style::default().fg(if is_updating { Color::Yellow } else { Color::Green })
-            ),
-        ])
-    ];
-
-    Paragraph::new(content)
-        .style(Style::default().fg(Color::DarkGray))
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray)))
+    Paragraph::new(Line::from(vec![
+        Span::styled("[H]", Style::default().fg(Color::Yellow)),
+        Span::raw(" Hilfe | "),
+        Span::styled("[R]", Style::default().fg(Color::Yellow)),
+        Span::raw(" Aktualisieren | "),
+        Span::styled("[Q]", Style::default().fg(Color::Yellow)),
+        Span::raw(" Beenden | "),
+        Span::styled(update_text, Style::default().fg(Color::Blue)),
+    ]))
+    .alignment(Alignment::Center)
 }
 
 pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {

@@ -34,7 +34,7 @@ pub struct MempoolCache {
 static MEMPOOL_CACHE: Lazy<Mutex<Option<MempoolCache>>> = Lazy::new(|| Mutex::new(None));
 
 impl super::BitcoinRPC {
-    const CACHE_DURATION: Duration = Duration::from_secs(30);
+    const CACHE_DURATION: Duration = Duration::from_secs(10);
 
     pub fn get_mempool_stats(&self) -> Result<MempoolStats> {
         // Prüfe Cache
