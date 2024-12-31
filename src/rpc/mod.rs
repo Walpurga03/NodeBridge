@@ -8,6 +8,12 @@ use anyhow::Result;
 use hex;
 use serde_json::{Value, json};
 use bitcoincore_rpc::Error;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::collections::HashMap;
+use parking_lot::Mutex;
+use once_cell::sync::Lazy;
+use reqwest::blocking::Client as HttpClient;
 
 // Re-export wichtiger Typen
 pub use self::mempool::MempoolStats;
@@ -81,6 +87,52 @@ pub struct BlockDetails {
     pub bits: String,
     pub nonce: u32,
 }
+
+#[derive(Debug, Clone)]
+pub struct AddressDetails {
+    pub tx_count: usize,
+    pub received: f64,
+    pub sent: f64,
+    pub balance: f64,
+    pub first_seen: i64,
+    pub last_seen: i64,
+    pub funded_txo_count: usize,   // Anzahl empfangener Outputs
+    pub spent_txo_count: usize,    // Anzahl ausgegebener Outputs
+    pub unspent_txo_count: usize,  // Anzahl unausgegebener Outputs
+    pub has_mempool_tx: bool,      // Hat unbestätigte Transaktionen
+    pub address_type: String,      // z.B. "p2wpkh" (native segwit)
+}
+
+pub trait BitcoinRPCInterface: Clone {
+    fn get_address_balance(&self, address: &str) -> Result<f64>;
+    fn get_address_tx_count(&self, address: &str) -> Result<usize>;
+    fn get_address_details(&self, address: &str) -> Result<AddressDetails>;
+}
+
+impl BitcoinRPCInterface for BitcoinRPC {
+    fn get_address_balance(&self, address: &str) -> Result<f64> {
+        self.get_address_balance(address)
+    }
+
+    fn get_address_tx_count(&self, address: &str) -> Result<usize> {
+        self.get_address_tx_count(address)
+    }
+
+    fn get_address_details(&self, address: &str) -> Result<AddressDetails> {
+        self.get_address_details(address)
+    }
+}
+
+// Cache-Struktur für Adressdetails
+struct AddressDetailsCache {
+    details: AddressDetails,
+    last_update: Instant
+}
+
+// Globaler Cache mit Thread-Safety
+static ADDRESS_DETAILS_CACHE: Lazy<Mutex<HashMap<String, AddressDetailsCache>>> = Lazy::new(|| {
+    Mutex::new(HashMap::new())
+});
 
 impl BitcoinRPC {
     pub fn new() -> anyhow::Result<Self> {
@@ -272,142 +324,235 @@ impl BitcoinRPC {
     }
 
     pub fn get_explorer_address(&self, address: &str) -> Result<Value, Error> {
-        // Für die spezifische Adresse direkt prüfen
-        if address == "bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd" {
-            return Ok(json!({
-                "type": "Taproot (P2TR)",
-                "address": address,
-                "scriptPubKey": {
-                    "type": "taproot",
-                    "address": address
-                },
-                "balance": 0.0,
-                "unconfirmed_balance": 0.0,
-                "total_received": 1.45124500,
-                "total_sent": 1.45124500,
-                "utxo_details": {
-                    "count": 0,
-                    "total_balance": 0.0
-                },
-                "unconfirmed_utxos": 0,
-                "tx_count": 2,
-                "recent_transactions": [
-                    {
-                        "txid": "bcac1259b3faf4d01f8f0d99d5340576f197553a899e058ea3833fe5f82e0345",
-                        "time": 1735481703,
-                        "amount": 1.45124500,
-                        "confirmations": 1,
-                        "details": {
-                            "from": "1KkXkfs2ta4SEJFF5PpD9RjS4dPXn3d5ii",
-                            "outputs": [
-                                {"address": "bc1qfz5d99yh2n7e5uv83srs7vxpaynhkqa5vcf5czyjzgzgpctqyv7s0ua0r2", "amount": 0.85900000},
-                                {"address": "bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd", "amount": 1.45124500}
-                            ],
-                            "fee": 0.00024300
-                        }
-                    },
-                    {
-                        "txid": "f56a02b6b144d7a38d6d0c83057c42e7802a7714fac4bc34b3755ff211908525",
-                        "time": 1735481703,
-                        "amount": -1.45124500,
-                        "confirmations": 1,
-                        "details": {
-                            "from": "bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd",
-                            "outputs": [
-                                {"address": "bc1pfll46uzkdxdytwlxz6y8ynnz4c2npm5et94lf5dy328k9fnkltmqal078l", "amount": 1.25109000},
-                                {"address": "bc1qr96hqaxsygle4uzf70ryg5yyjdgq3s3sntte97jrkf6fe42svweqj6juld", "amount": 0.20000000}
-                            ]
-                        }
-                    }
-                ]
-            }));
-        }
+        let mut address_info = json!({
+            "address": address
+        });
 
-        // Für andere Adressen den normalen Prozess durchführen
-        let mut base_info = match address {
-            // Für Public Keys
-            a if a.len() == 130 && a.chars().all(|c| c.is_ascii_hexdigit()) => {
-                json!({
-                    "type": "Public Key",
-                    "address": address,
-                    "scriptPubKey": {
-                        "type": "pubkey",
-                        "asm": format!("{} OP_CHECKSIG", address)
-                    }
-                })
-            },
-            // Für Taproot-Adressen
-            a if a.starts_with("bc1p") => {
-                json!({
-                    "type": "Taproot (P2TR)",
-                    "address": address,
-                    "scriptPubKey": {
-                        "type": "taproot",
-                        "address": address
-                    }
-                })
-            },
-            // Für andere Adressen
-            _ => json!({
-                "type": "Standard",
-                "address": address
-            })
-        };
-
-        // Adressinformationen laden
+        // Adressinformationen von der Node abfragen
         if let Ok(addr_info) = self.client.call::<Value>("getaddressinfo", &[json!(address)]) {
-            // Grundlegende Informationen
-            base_info["type"] = addr_info.get("type").unwrap_or(&json!("unknown")).clone();
-            base_info["scriptPubKey"] = addr_info.get("scriptPubKey").unwrap_or(&json!({})).clone();
-            base_info["ismine"] = addr_info.get("ismine").unwrap_or(&json!(false)).clone();
-            base_info["iswatchonly"] = addr_info.get("iswatchonly").unwrap_or(&json!(false)).clone();
-            base_info["solvable"] = addr_info.get("solvable").unwrap_or(&json!(false)).clone();
+            // Grundlegende Informationen von der Node
+            address_info["type"] = addr_info.get("type").unwrap_or(&json!("unknown")).clone();
+            address_info["scriptPubKey"] = addr_info.get("scriptPubKey").unwrap_or(&json!({})).clone();
+            address_info["ismine"] = addr_info.get("ismine").unwrap_or(&json!(false)).clone();
+            address_info["iswatchonly"] = addr_info.get("iswatchonly").unwrap_or(&json!(false)).clone();
+            address_info["solvable"] = addr_info.get("solvable").unwrap_or(&json!(false)).clone();
+        }
 
-            // Scorch API für zusätzliche Informationen nutzen
-            if let Ok(scorch_info) = self.client.call::<Value>("scoresgetaddressbalance", &[json!(address)]) {
-                base_info["balance"] = scorch_info.get("balance").unwrap_or(&json!(0.0)).clone();
-                base_info["total_received"] = scorch_info.get("received").unwrap_or(&json!(0.0)).clone();
-                base_info["total_sent"] = scorch_info.get("sent").unwrap_or(&json!(0.0)).clone();
+        // UTXO Informationen von der Node abfragen
+        if let Ok(utxos) = self.client.call::<Value>("listunspent", &[json!(0), json!(9999999), json!([address])]) {
+            address_info["utxos"] = utxos;
+        }
+
+        // Transaktionshistorie von der Node abfragen
+        if let Ok(history) = self.client.call::<Value>("listtransactions", &[json!("*"), json!(10), json!(0), json!(true)]) {
+            let addr_txs: Vec<_> = history.as_array()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .filter(|tx| tx.get("address").and_then(|a| a.as_str()) == Some(address))
+                .cloned()
+                .collect();
+            
+            address_info["transactions"] = json!(addr_txs);
+        }
+
+        Ok(address_info)
+    }
+
+    pub fn get_address_balance(&self, address: &str) -> Result<f64> {
+        let descriptor = format!("addr({})", address);
+        let scan_result = self.client.call::<Value>(
+            "scantxoutset",
+            &[
+                json!("start"),
+                json!([descriptor])
+            ]
+        )?;
+
+        let total_amount = scan_result
+            .get("total_amount")
+            .and_then(|t| t.as_f64())
+            .unwrap_or(0.0);
+
+        Ok(total_amount)
+    }
+
+    fn log_debug(&self, msg: &str) {
+        static FIRST_CALL: std::sync::Once = std::sync::Once::new();
+        
+        // Beim ersten Aufruf die Datei leeren
+        FIRST_CALL.call_once(|| {
+            if let Ok(mut file) = std::fs::File::create("debug.log") {
+                let _ = writeln!(file, "=== Debug Log Start ===");
             }
+        });
 
-            // UTXO Informationen laden
-            if let Ok(utxos) = self.client.call::<Value>("listunspent", &[json!(0), json!(9999999), json!([address])]) {
-                let empty_vec = Vec::new();
-                let utxo_array = utxos.as_array().unwrap_or(&empty_vec);
-                let mut total_balance = 0.0;
-                let mut utxo_count = 0;
+        // Dann normal weiterschreiben
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("debug.log") 
+        {
+            let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+            let _ = writeln!(file, "[{}] {}", timestamp, msg);
+        }
+    }
 
-                for utxo in utxo_array {
-                    if let Some(amount) = utxo.get("amount").and_then(|a| a.as_f64()) {
-                        total_balance += amount;
-                        utxo_count += 1;
-                    }
+    pub fn get_address_tx_count(&self, address: &str) -> Result<usize> {
+        self.log_debug(&format!("Abfrage mempool.space API für Adresse {}", address));
+        
+        // HTTP Client für mempool.space API
+        let client = HttpClient::new();
+        let url = format!("https://mempool.space/api/address/{}", address);
+        
+        match client.get(&url).send() {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let data: Value = response.json()?;
+                    let tx_count = data.get("chain_stats")
+                        .and_then(|stats| stats.get("tx_count"))
+                        .and_then(|count| count.as_u64())
+                        .unwrap_or(0) as usize;
+                    
+                    self.log_debug(&format!("Gefunden: {} Transaktionen", tx_count));
+                    Ok(tx_count)
+                } else {
+                    self.log_debug(&format!("API Fehler: {}", response.status()));
+                    Ok(0)
                 }
-
-                base_info["utxo_details"] = json!({
-                    "count": utxo_count,
-                    "total_balance": total_balance,
-                    "utxos": utxos
-                });
+            },
+            Err(e) => {
+                self.log_debug(&format!("Netzwerk Fehler: {}", e));
+                Ok(0)
             }
+        }
+    }
 
-            // Transaktionshistorie laden
-            if let Ok(history) = self.client.call::<Value>("listtransactions", &[json!("*"), json!(10), json!(0), json!(true)]) {
-                let mut addr_txs = Vec::new();
-                if let Some(txs) = history.as_array() {
-                    for tx in txs {
-                        if let Some(tx_addr) = tx.get("address") {
-                            if tx_addr == address {
-                                addr_txs.push(tx.clone());
-                            }
-                        }
-                    }
-                }
-                base_info["recent_transactions"] = json!(addr_txs);
-                base_info["tx_count"] = json!(addr_txs.len());
+    pub fn get_address_details(&self, address: &str) -> Result<AddressDetails> {
+        const CACHE_DURATION: Duration = Duration::from_secs(30);
+        
+        // Prüfe Cache
+        let mut cache = ADDRESS_DETAILS_CACHE.lock();
+        if let Some(cached) = cache.get(address) {
+            if cached.last_update.elapsed() < CACHE_DURATION {
+                return Ok(cached.details.clone());
             }
         }
 
-        Ok(base_info)
+        self.log_debug(&format!("Abfrage mempool.space API für Adresse {}", address));
+        
+        let client = HttpClient::new();
+        let url = format!("https://mempool.space/api/address/{}", address);
+        
+        match client.get(&url).send() {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let data: Value = response.json()?;
+                    
+                    // Debug: Komplette API-Antwort loggen
+                    self.log_debug(&format!("API Antwort: {}", serde_json::to_string_pretty(&data)?));
+                    
+                    let chain_stats = data.get("chain_stats")
+                        .ok_or_else(|| anyhow::anyhow!("Keine Chain-Stats gefunden"))?;
+                    
+                    // Debug: Chain-Stats separat loggen
+                    self.log_debug(&format!("Chain Stats: {}", serde_json::to_string_pretty(&chain_stats)?));
+
+                    let mempool_stats = data.get("mempool_stats")
+                        .ok_or_else(|| anyhow::anyhow!("Keine Mempool-Stats gefunden"))?;
+                    
+                    // Debug: Mempool-Stats separat loggen
+                    self.log_debug(&format!("Mempool Stats: {}", serde_json::to_string_pretty(&mempool_stats)?));
+
+                    // Werte extrahieren und direkt loggen
+                    let received_chain = chain_stats.get("received").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let received_mempool = mempool_stats.get("received").and_then(|v| v.as_u64()).unwrap_or(0);
+                    self.log_debug(&format!("Received: chain={}, mempool={}", received_chain, received_mempool));
+
+                    let spent_chain = chain_stats.get("spent").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let spent_mempool = mempool_stats.get("spent").and_then(|v| v.as_u64()).unwrap_or(0);
+                    self.log_debug(&format!("Spent: chain={}, mempool={}", spent_chain, spent_mempool));
+
+                    // Werte kombinieren (bestätigt + unbestätigt)
+                    let tx_count = (chain_stats.get("tx_count").and_then(|v| v.as_u64()).unwrap_or(0) +
+                                  mempool_stats.get("tx_count").and_then(|v| v.as_u64()).unwrap_or(0)) as usize;
+
+                    let received = (chain_stats.get("funded_txo_sum").and_then(|v| v.as_u64()).unwrap_or(0) +
+                                  mempool_stats.get("funded_txo_sum").and_then(|v| v.as_u64()).unwrap_or(0)) as f64 / 100_000_000.0;
+
+                    let sent = (chain_stats.get("spent_txo_sum").and_then(|v| v.as_u64()).unwrap_or(0) +
+                              mempool_stats.get("spent_txo_sum").and_then(|v| v.as_u64()).unwrap_or(0)) as f64 / 100_000_000.0;
+
+                    let balance = received - sent;
+
+                    // Erste/Letzte Aktivität
+                    let first_seen = chain_stats.get("first_seen")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0);
+                    
+                    let last_seen = chain_stats.get("last_seen")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0);
+
+                    self.log_debug(&format!("Details gefunden: {} Transaktionen, {:.8} BTC Balance", 
+                        tx_count, balance));
+
+                    let funded_txo_count = chain_stats.get("funded_txo_count")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) as usize;
+                        
+                    let spent_txo_count = chain_stats.get("spent_txo_count")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) as usize;
+
+                    let unspent_txo_count = funded_txo_count - spent_txo_count;
+                    
+                    let has_mempool_tx = mempool_stats.get("tx_count")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) > 0;
+
+                    // Adresstyp aus dem Format erkennen
+                    let address_type = if address.starts_with("bc1p") {
+                        "Taproot (P2TR)".to_string()
+                    } else if address.starts_with("bc1") {
+                        "Native SegWit (P2WPKH)".to_string()
+                    } else if address.starts_with("3") {
+                        "Nested SegWit (P2SH)".to_string()
+                    } else if address.starts_with("1") {
+                        "Legacy (P2PKH)".to_string()
+                    } else {
+                        "Unbekannt".to_string()
+                    };
+
+                    let details = AddressDetails {
+                        tx_count,
+                        received,
+                        sent,
+                        balance,
+                        first_seen,
+                        last_seen,
+                        funded_txo_count,
+                        spent_txo_count,
+                        unspent_txo_count,
+                        has_mempool_tx,
+                        address_type,
+                    };
+
+                    // Nach erfolgreicher API-Abfrage:
+                    cache.insert(address.to_string(), AddressDetailsCache {
+                        details: details.clone(),
+                        last_update: Instant::now()
+                    });
+
+                    Ok(details)
+                } else {
+                    self.log_debug(&format!("API Fehler: {}", response.status()));
+                    Err(anyhow::anyhow!("API Fehler: {}", response.status()))
+                }
+            },
+            Err(e) => {
+                self.log_debug(&format!("Netzwerk Fehler: {}", e));
+                Err(anyhow::anyhow!("Netzwerk Fehler: {}", e))
+            }
+        }
     }
 } 

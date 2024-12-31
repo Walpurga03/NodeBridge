@@ -2,58 +2,54 @@
 
 ## ✅ Abgeschlossen
 
-### UI & Darstellung
-- Basis UI-Framework mit TUI
-- Tab-basierte Navigation
-- Hilfe-System für jeden Tab
-- Statusleiste mit Update-Anzeige
-- Farbkodierung für wichtige Werte
-- Responsive Layout
+### Core Funktionalität
+- [x] Bitcoin Core RPC Integration
+- [x] Grundlegende Fehlerbehandlung
+- [x] Logging-System implementiert
+- [x] Konfiguration über .env
 
-### Netzwerk & Peers
-- Netzwerkstatus-Übersicht
-- Peer-Liste mit Details
-- Tor/Clearnet Verhältnis
-- Latenz-Monitoring
-- Verbindungsqualität-Anzeige
+### Netzwerk & Blockchain
+- [x] Block-Explorer Funktionalität
+- [x] Mempool-Statistiken
+- [x] Node-Status Anzeige
+- [x] Netzwerk-Informationen
 
-### Mempool
-- Aktuelle Transaktionen
-- Gebühren-Statistiken
-- Auto-Update alle 10 Sekunden
-- Cache-System implementiert
+### Adress-Funktionen
+- [x] Adressdetails via mempool.space API
+- [x] UTXO-Tracking und Statistiken
+- [x] Transaktionszählung
+- [x] Guthaben-Berechnung
+- [x] Cache-System für API-Anfragen
 
-### Mining
-- Difficulty-Anzeige
-- Hashrate-Berechnung
-- Prognose für nächste Anpassung
-- Einheitenformatierung (EH/s, PH/s, etc.)
-
-### Sicherheit
-- Software-Versions-Check
-- Netzwerk-Sicherheitsanalyse
-- RPC-Zugriffskontrolle
-- Backup-Status
-- System-Uptime Monitoring
+### UI/UX
+- [x] TUI Framework eingerichtet
+- [x] Tab-basierte Navigation
+- [x] Responsive Layout
+- [x] Farbkodierung für verschiedene Stati
+- [x] Hilfe-System implementiert
 
 ## 🚧 In Arbeit
-- Block-Explorer Funktionalität
-- Wallet-Integration
-- System-Ressourcen Monitoring
+- [ ] Erweiterte Transaktionsdetails
+- [ ] Verbessertes Error-Handling
+- [ ] Performance-Optimierungen
+- [ ] Dokumentation vervollständigen
 
 ## 📝 Geplant
-- Konfigurationsdatei
-- Logging-System
-- Automatische Updates
-- Mehrsprachenunterstützung
-- Dark/Light Theme
+- [ ] Wallet-Integration
+- [ ] Transaktions-Broadcasting
+- [ ] Multi-Adress-Support
+- [ ] Export-Funktionen
+- [ ] Internationalisierung
 
-## 🐛 Bekannte Probleme
-- Speicheroptimierung bei vielen Peers nötig
-- Bessere Fehlerbehandlung implementieren
-- Performance bei großem Mempool verbessern
+## ❌ Bekannte Probleme
+- [ ] Rate-Limiting bei API-Anfragen
+- [ ] Speicherverbrauch bei langen Sitzungen
+- [ ] Gelegentliche UI-Verzögerungen
 
-## 📊 Statistik
-- Lines of Code: ~2000
-- Implementierte Tabs: 7/8
-- Test Coverage: ~60% 
+## 📊 Statistiken
+- Implementierte Module: 8
+- Getestete Komponenten: 4
+- Offene Issues: 3
+- Code Coverage: ~60%
+
+Zuletzt aktualisiert: 31.12.2024
