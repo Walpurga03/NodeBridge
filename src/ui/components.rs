@@ -33,6 +33,8 @@ pub fn create_footer(update_interval: Duration, is_updating: bool, spinner_state
             Span::raw(": Hilfe | "),
             Span::styled("Q", Style::default().fg(Color::Yellow)),
             Span::raw(": Beenden | "),
+            Span::styled("1-9", Style::default().fg(Color::Yellow)),
+            Span::raw(": Tabs | "),
             Span::styled(status_text, Style::default().fg(Color::Blue))
         ])
     ])
@@ -76,4 +78,15 @@ pub fn create_tabs(current_tab: &Tab) -> Tabs<'static> {
         .highlight_style(Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD))
+}
+
+#[allow(dead_code)]
+/// Erstellt einen Statusblock mit Farbkodierung
+pub fn status_block(status: &str) -> Block {
+    match status {
+        "success" => Block::default().borders(Borders::ALL).title("Erfolg").style(Style::default().fg(Color::Green)),
+        "warning" => Block::default().borders(Borders::ALL).title("Warnung").style(Style::default().fg(Color::Yellow)),
+        "error" => Block::default().borders(Borders::ALL).title("Fehler").style(Style::default().fg(Color::Red)),
+        _ => Block::default().borders(Borders::ALL).title("Status").style(Style::default().fg(Color::White)),
+    }
 } 

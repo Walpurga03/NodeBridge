@@ -18,12 +18,24 @@ pub fn render(
     let mut content = vec![
         Line::from(vec![
             Span::styled("⚡ ", Style::default().fg(Color::Yellow)),
-            Span::styled(format!("Netzwerk: {}", network), 
+            Span::styled(format!("Netzwerk: {} ", network), 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             Span::raw(" | "),
             Span::styled("🔌 ", Style::default().fg(Color::Yellow)),
-            Span::styled(format!("{} Peers", connections.to_formatted_string(&Locale::de)),
-                Style::default().fg(if connections > 8 { Color::Green } else { Color::Yellow })),
+            Span::styled(
+                format!("{} Peers", connections.to_formatted_string(&Locale::de)),
+                Style::default()
+                    .fg(if connections > 8 { Color::Green } 
+                        else if connections > 4 { Color::Yellow }
+                        else { Color::Red })
+                    .add_modifier(if connections < 5 { Modifier::BOLD } else { Modifier::empty() })
+            ),
+            if connections < 5 {
+                Span::styled(" (Zu wenige Verbindungen!)", 
+                    Style::default().fg(Color::Red))
+            } else {
+                Span::raw("")
+            }
         ]),
         Line::from(""),
         Line::from(vec![
@@ -38,20 +50,27 @@ pub fn render(
             Span::styled("Headers: ", Style::default().fg(Color::Cyan)),
             Span::styled(headers.to_formatted_string(&Locale::de), 
                 Style::default().fg(Color::White)),
+            if headers > blocks {
+                Span::styled(
+                    format!(" ({} ausstehend)", 
+                        (headers - blocks).to_formatted_string(&Locale::de)),
+                    Style::default().fg(Color::Yellow)
+                )
+            } else {
+                Span::raw("")
+            }
         ]),
         Line::from(vec![
             Span::styled("Difficulty: ", Style::default().fg(Color::Cyan)),
             Span::styled(
-                format!("{:.2e} ({})", 
-                    difficulty,
-                    (difficulty.round() as u64).to_formatted_string(&Locale::de)
-                ),
+                format!("{:.2e}", 
+                    difficulty),
                 Style::default().fg(Color::White)
             ),
         ]),
         Line::from(vec![
             Span::styled("Chain Work: ", Style::default().fg(Color::Cyan)),
-            Span::styled(chain_work, Style::default().fg(Color::White)),
+            Span::styled(chain_work.clone(), Style::default().fg(Color::White)),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -121,7 +140,7 @@ pub fn render(
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::White))
-            .title(" Node Information "))
+            .title(" Dashboard Übersicht "))
 }
 
 fn format_size(bytes: u64) -> String {

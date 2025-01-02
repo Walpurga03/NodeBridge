@@ -160,14 +160,6 @@ pub fn render_help() -> Paragraph<'static> {
         .title(" Hilfe: Adressdetails "))
 }
 
-fn format_timestamp(timestamp: i64) -> String {
-    if timestamp == 0 {
-        return "Keine Daten".to_string();
-    }
-    DateTime::<Utc>::from_timestamp(timestamp, 0)
-        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
-        .unwrap_or_else(|| "Ungültiges Datum".to_string())
-}
 
 #[cfg(test)]
 mod tests; 

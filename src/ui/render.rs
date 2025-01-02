@@ -59,7 +59,6 @@ pub fn draw_ui(
 
         let header = components::create_header(version);
         let tabs = components::create_tabs(tab);
-        
         let content = match tab {
             Tab::Dashboard => ContentWidget::Text(render_node_info(
                 &network,
@@ -141,7 +140,6 @@ pub fn draw_ui(
                         ssl_enabled: true,
                         ip_restricted: true,
                         auth_required: true,
-                        command_restrictions: true,
                     },
                 };
                 ContentWidget::Text(render_security(&security_status))
@@ -164,7 +162,6 @@ pub fn draw_ui(
             let message = &status_messages[0];
             let style = match message.level {
                 MessageLevel::Info => Style::default().fg(Color::Blue),
-                MessageLevel::Warning => Style::default().fg(Color::Yellow),
                 MessageLevel::Error => Style::default().fg(Color::Red),
             };
             
@@ -187,7 +184,7 @@ pub fn draw_ui(
         );
         
         // Hilfe-Fenster-Bereich definieren
-        let area = centered_rect(80, 90, f.size());
+        let area = centered_rect(80, 95, f.size());
         
         // Nochmal explizit den Hilfe-Bereich schwarz färben
         f.render_widget(
@@ -198,7 +195,7 @@ pub fn draw_ui(
         );
         
         // Hilfe-Widget darüber rendern
-        let help = help::create_help(tab);
+        let help = help::create_help(tab, 0);
         f.render_widget(help, area);
     }
 }

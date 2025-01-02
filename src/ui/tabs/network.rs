@@ -1,6 +1,7 @@
 use crate::ui::common::*;
 use crate::rpc::PeerInfo;
 use num_format::{Locale, ToFormattedString};
+use log::{info, warn, error};
 
 pub fn render(connections: u64, network: String, verification_progress: f64, peers: &[PeerInfo]) -> Paragraph<'static> {
     // Peer-Statistiken berechnen
@@ -122,4 +123,12 @@ pub fn render(connections: u64, network: String, verification_progress: f64, pee
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::White))
             .title(" Netzwerk "))
+}
+
+#[allow(dead_code)]
+pub fn display_network_info() {
+    info!("Netzwerk-Informationen werden abgerufen.");
+    // Netzwerk-Info Logik
+    warn!("Dies ist eine Warnmeldung für das Netzwerk-Modul.");
+    error!("Dies ist eine Fehlermeldung für das Netzwerk-Modul.");
 } 

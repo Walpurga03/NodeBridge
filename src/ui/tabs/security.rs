@@ -5,7 +5,6 @@ pub struct RPCStatus {
     pub ssl_enabled: bool,
     pub ip_restricted: bool,
     pub auth_required: bool,
-    pub command_restrictions: bool,
 }
 
 pub struct SecurityStatus {

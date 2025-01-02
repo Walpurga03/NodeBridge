@@ -22,7 +22,7 @@ nodebridge/
 │           ├── security.rs
 │           └── explorer.rs
 ├── .env                  # Konfigurationsdatei
-└── Cargo.toml           # Projekt-Manifest
+├── Cargo.toml           # Projekt-Manifest
 ```
 
 ## Komponenten
@@ -31,6 +31,8 @@ nodebridge/
 - **Tab System**: Modulare Ansichten für verschiedene Funktionen
 - **Help System**: Kontextbezogene Hilfe
 - **Common**: Wiederverwendbare UI-Komponenten
+- **Wallet Module**: Verwaltung und Integration von Bitcoin Wallets
+- **Export Module**: Funktionen zum Exportieren von Daten in verschiedenen Formaten
 
 ## Konfiguration
 - `.env`: Bitcoin Core RPC Zugangsdaten
@@ -44,8 +46,13 @@ nodebridge/
   - anyhow: Error Handling
   - chrono: Zeitformatierung
   - dotenv: Konfiguration
+- **Logging**:
+  - log: Logging-Bibliothek
+  - env_logger: Logger-Implementierung
 
 - **Intern**:
   - rpc → ui: Node-Daten
   - ui/common → ui/tabs: Gemeinsame Komponenten
   - ui/render → ui/tabs: Tab-Rendering
+  - ui/wallet: Verwaltung und Integration von Wallets
+  - ui/export: Datenexport-Funktionen

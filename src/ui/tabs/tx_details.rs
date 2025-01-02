@@ -1,16 +1,30 @@
-use crate::ui::common::*;
+use super::super::common::*;
 use crate::rpc::BitcoinRPC;
-use serde_json::Value;
+use chrono::{DateTime, Utc};
 
 #[derive(Clone)]
 pub struct TxMode {
     pub txid: String,
+    pub copy_mode: bool,
+}
+
+impl TxMode {
+    pub fn new(txid: String) -> Self {
+        Self {
+            txid,
+            copy_mode: false,
+        }
+    }
+
+    pub fn toggle_copy_mode(&mut self) {
+        self.copy_mode = !self.copy_mode;
+    }
 }
 
 pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragraph<'static> {
     match (mode, rpc_client) {
         (Some(tx_mode), Some(client)) => {
-            match client.get_explorer_transaction(&tx_mode.txid) {
+            match client.get_raw_transaction(&tx_mode.txid) {
                 Ok(tx) => {
                     let mut lines = vec![
                         Line::from(vec![
@@ -18,40 +32,136 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                                 Style::default().fg(Color::Yellow))
                         ]),
                         Line::from(""),
-                        Line::from(format!("TXID: {}", tx_mode.txid)),
                     ];
 
+                    // Kopier-Modus Status
+                    if tx_mode.copy_mode {
+                        lines.push(Line::from(vec![
+                            Span::styled("📋 Kopier-Modus aktiv (ESC zum Beenden)", 
+                                Style::default().fg(Color::Green))
+                        ]));
+                        lines.push(Line::from(""));
+                    } else {
+                        lines.push(Line::from(vec![
+                            Span::styled("Drücke 'C' für Kopier-Modus", 
+                                Style::default().fg(Color::Gray))
+                        ]));
+                        lines.push(Line::from(""));
+                    }
+
+                    // TXID mit Kopier-Modus
+                    let txid_style = if tx_mode.copy_mode {
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                    };
+
+                    lines.push(Line::from(vec![
+                        Span::raw("TXID: "),
+                        Span::styled(tx_mode.txid.clone(), txid_style)
+                    ]));
+
+                    // Prüfen ob es eine Coinbase TX ist
+                    let is_coinbase = tx.vin.len() == 1 && 
+                        tx.vin[0].get("txid")
+                           .and_then(|v| v.as_str())
+                           .map(|s| s == "0000000000000000000000000000000000000000000000000000000000000000")
+                           .unwrap_or(false);
+
+                    if is_coinbase {
+                        lines.push(Line::from(""));
+                        lines.push(Line::from(vec![
+                            Span::styled("🌟 Coinbase Transaktion (Block Belohnung + Gebühren)", 
+                                Style::default().fg(Color::Yellow))
+                        ]));
+                    }
+
                     // Inputs
-                    if let Some(inputs) = tx.get("vin").and_then(|v| v.as_array()) {
+                    if !tx.vin.is_empty() {
                         lines.push(Line::from(""));
                         lines.push(Line::from(vec![
                             Span::styled("Inputs:", Style::default().fg(Color::Cyan))
                         ]));
-                        for input in inputs {
-                            if let Some(prev_txid) = input.get("txid") {
-                                lines.push(Line::from(format!(" • {}", prev_txid)));
+                        if is_coinbase {
+                            lines.push(Line::from(" • Neue Bitcoins (Block Belohnung)"));
+                        } else {
+                            for input in tx.vin.iter() {
+                                let value = input.get("value").cloned();
+                                let addr = input.get("address").cloned();
+                                let txid = input.get("txid").cloned();
+                                
+                                if let (Some(value), Some(addr)) = (value, addr) {
+                                    lines.push(Line::from(format!(
+                                        " • {} BTC", value
+                                    )));
+                                    lines.push(Line::from(vec![
+                                        Span::raw("   TX: "),
+                                        Span::styled(
+                                            txid.and_then(|v| v.as_str().map(|s| s.to_string()))
+                                                .unwrap_or_else(|| "Unbekannt".to_string()),
+                                            Style::default().add_modifier(Modifier::REVERSED)
+                                        )
+                                    ]));
+                                    lines.push(Line::from(vec![
+                                        Span::raw("   Von: "),
+                                        Span::styled(
+                                            addr.as_str().map(|s| s.to_string())
+                                                .unwrap_or_else(|| "Unbekannt".to_string()),
+                                            Style::default().add_modifier(Modifier::REVERSED)
+                                        )
+                                    ]));
+                                }
                             }
                         }
                     }
 
                     // Outputs
-                    if let Some(outputs) = tx.get("vout").and_then(|v| v.as_array()) {
+                    if !tx.vout.is_empty() {
                         lines.push(Line::from(""));
                         lines.push(Line::from(vec![
                             Span::styled("Outputs:", Style::default().fg(Color::Cyan))
                         ]));
-                        for output in outputs {
-                            if let Some(value) = output.get("value") {
-                                if let Some(addr) = output.get("scriptPubKey")
-                                    .and_then(|s| s.get("address")) {
-                                    lines.push(Line::from(format!(
-                                        " • {} BTC → {}", 
-                                        value, addr
-                                    )));
+                        for (index, output) in tx.vout.iter().enumerate() {
+                            let value = output.get("value").cloned();
+                            let script_pub_key = output.get("scriptPubKey").cloned();
+                            
+                            if let Some(value) = value {
+                                lines.push(Line::from(format!(
+                                    " • {} BTC", value
+                                 )));
+                                lines.push(Line::from(vec![
+                                    Span::raw("   TX: "),
+                                    Span::styled(
+                                        format!("{}:{}", tx_mode.txid, index),
+                                        Style::default().add_modifier(Modifier::REVERSED)
+                                    )
+                                ]));
+                                if let Some(script_pub_key) = script_pub_key {
+                                    if let Some(addr) = script_pub_key.get("address") {
+                                        lines.push(Line::from(vec![
+                                            Span::raw("   An: "),
+                                            Span::styled(
+                                                addr.as_str().map(|s| s.to_string())
+                                                    .unwrap_or_else(|| "Unbekannt".to_string()),
+                                                Style::default().add_modifier(Modifier::REVERSED)
+                                            )
+                                        ]));
+                                    }
                                 }
                             }
                         }
                     }
+
+                    // Zeit formatieren
+                    let dt = if let Some(blocktime) = tx.blocktime {
+                        DateTime::<Utc>::from_timestamp(blocktime as i64, 0)
+                            .unwrap_or_default()
+                            .format("%Y-%m-%d %H:%M:%S UTC").to_string()
+                    } else {
+                        "Noch nicht bestätigt".to_string()
+                    };
 
                     // Details
                     lines.extend_from_slice(&[
@@ -59,10 +169,38 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                         Line::from(vec![
                             Span::styled("Details:", Style::default().fg(Color::Cyan))
                         ]),
-                        Line::from(format!(" • Größe: {} bytes", tx.get("size").unwrap_or(&Value::Null))),
-                        Line::from(format!(" • Gewicht: {} WU", tx.get("weight").unwrap_or(&Value::Null))),
-                        Line::from(format!(" • Zeit: {}", tx.get("time").unwrap_or(&Value::Null))),
-                        Line::from(format!(" • Block: {}", tx.get("blockhash").unwrap_or(&Value::Null))),
+                        Line::from(vec![
+                            Span::styled("Größe: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(
+                                format!("{} bytes", tx.size),
+                                Style::default().fg(Color::White)
+                            )
+                        ]),
+                        Line::from(vec![
+                            Span::styled("Virtuelle Größe: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(
+                                format!("{} vbytes", tx.size),
+                                Style::default().fg(Color::White)
+                            )
+                        ]),
+                        Line::from(vec![
+                            Span::styled("Gewicht: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(
+                                format!("{} WU", tx.weight),
+                                Style::default().fg(Color::White)
+                            )
+                        ]),
+                        Line::from(vec![
+                            Span::styled("Zeit: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(dt, Style::default().fg(Color::White)),
+                        ]),
+                        Line::from(vec![
+                            Span::styled("Block: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(
+                                tx.blockhash.unwrap_or_else(|| "Noch nicht bestätigt".to_string()),
+                                Style::default().fg(Color::White)
+                            ),
+                        ]),
                     ]);
 
                     Paragraph::new(lines)
@@ -75,4 +213,9 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
     .block(Block::default()
         .borders(Borders::ALL)
         .title(" Transaction Details "))
+}
+
+#[allow(dead_code)]
+pub fn some_unused_function() {
+    // Funktionaler Code hier
 } 

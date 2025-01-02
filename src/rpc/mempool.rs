@@ -1,143 +1,137 @@
 use anyhow::Result;
-use bitcoincore_rpc::RpcApi;
 use serde_json::Value;
+use reqwest::blocking::Client as HttpClient;
 use std::time::{Instant, Duration};
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone)]
-pub struct FeeCategory {
-    pub count: u64,
-    pub rate: f64,    // sat/vB
-    pub usd_price: f64,
-}
-
-#[derive(Debug, Clone)]
 pub struct MempoolStats {
     pub tx_count: u64,
-    pub size: u64,
-    pub memory_usage: u64,
-    pub max_memory: u64,
+    pub size: u64,  // Größe in Bytes
     pub no_priority: FeeCategory,
     pub low_priority: FeeCategory,
     pub medium_priority: FeeCategory,
     pub high_priority: FeeCategory,
 }
 
-pub struct MempoolCache {
+#[derive(Debug, Clone)]
+pub struct FeeCategory {
+    pub count: u64,
+    pub rate: f64,
+    pub usd_price: f64,
+}
+
+struct MempoolCache {
     stats: MempoolStats,
     last_update: Instant,
 }
 
-// Thread-sicherer Cache mit once_cell
 static MEMPOOL_CACHE: Lazy<Mutex<Option<MempoolCache>>> = Lazy::new(|| Mutex::new(None));
 
 impl super::BitcoinRPC {
-    const CACHE_DURATION: Duration = Duration::from_secs(10);
-
     pub fn get_mempool_stats(&self) -> Result<MempoolStats> {
+        const CACHE_DURATION: Duration = Duration::from_secs(30);
+
         // Prüfe Cache
-        if let Ok(cache_lock) = MEMPOOL_CACHE.lock() {
-            if let Some(cache) = &*cache_lock {
-                if cache.last_update.elapsed() < Self::CACHE_DURATION {
-                    return Ok(cache.stats.clone());
+        if let Ok(cache) = MEMPOOL_CACHE.lock() {
+            if let Some(cached) = &*cache {
+                if cached.last_update.elapsed() < CACHE_DURATION {
+                    return Ok(cached.stats.clone());
                 }
             }
         }
 
-        // Cache ist abgelaufen oder nicht vorhanden - neue Daten holen
-        let stats = self.fetch_mempool_stats()?;
+        // Nur eine API-Abfrage für die wichtigsten Daten
+        let client = HttpClient::new();
+        let mempool_data = client.get("https://mempool.space/api/mempool")
+            .send()?
+            .json::<Value>()?;
+
+        self.log_debug(&format!("Mempool API Antwort:\n{}", serde_json::to_string_pretty(&mempool_data)?));
+
+        // Basis-Statistiken
+        let tx_count = mempool_data.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+        let size = mempool_data.get("vsize").and_then(|v| v.as_u64()).unwrap_or(0);
+
+        self.log_debug(&format!("Mempool Details:
+- Transaktionen: {}
+- Größe: {:.2} MB", 
+            tx_count,
+            size as f64 / 1_000_000.0));
+
+        // Hole BTC Preis für USD Berechnung
+        let btc_price = client.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
+            .send()?
+            .json::<Value>()?
+            .get("bitcoin")
+            .and_then(|btc| btc.get("usd"))
+            .and_then(|usd| usd.as_f64())
+            .unwrap_or(43000.0);
+
+        // Gebührenkategorien aus dem Histogramm berechnen
+        let mut categories = vec![
+            FeeCategory { count: 0, rate: 1.0, usd_price: 0.0 },
+            FeeCategory { count: 0, rate: 2.0, usd_price: 0.0 },
+            FeeCategory { count: 0, rate: 3.0, usd_price: 0.0 },
+            FeeCategory { count: 0, rate: 5.0, usd_price: 0.0 },
+        ];
+
+        // Verarbeite Gebühren-Histogramm
+        if let Some(histogram) = mempool_data.get("fee_histogram").and_then(|v| v.as_array()) {
+            for entry in histogram {
+                if let Some(entry_array) = entry.as_array() {
+                    if entry_array.len() >= 2 {
+                        let fee_rate = entry_array[0].as_f64().unwrap_or(0.0);
+                        let count = entry_array[1].as_u64().unwrap_or(0);
+                        
+                        let idx = match fee_rate {
+                            r if r <= 1.0 => 0,  // No Priority: ≤ 1 sat/vB
+                            r if r <= 2.0 => 1,  // Low Priority: ≤ 2 sat/vB
+                            r if r <= 3.0 => 2,  // Medium Priority: ≤ 3 sat/vB
+                            _ => 3,              // High Priority: > 3 sat/vB
+                        };
+                        categories[idx].count += count;
+                        // Aktualisiere die höchste Rate in jeder Kategorie
+                        categories[idx].rate = categories[idx].rate.max(fee_rate);
+                    }
+                }
+            }
+        }
+
+        // Berechne USD-Preise für eine typische 250-Byte-Transaktion
+        for category in &mut categories {
+            category.usd_price = (category.rate * 250.0 * btc_price) / 100_000_000.0;
+        }
+
+        self.log_debug(&format!("Gebührenkategorien:
+- No Priority:   {} TXs @ {:.1} sat/vB (${:.2})
+- Low Priority:  {} TXs @ {:.1} sat/vB (${:.2})
+- Medium Prior.: {} TXs @ {:.1} sat/vB (${:.2})
+- High Priority: {} TXs @ {:.1} sat/vB (${:.2})",
+            categories[0].count, categories[0].rate, categories[0].usd_price,
+            categories[1].count, categories[1].rate, categories[1].usd_price,
+            categories[2].count, categories[2].rate, categories[2].usd_price,
+            categories[3].count, categories[3].rate, categories[3].usd_price));
+
+        // Verwende die berechneten Kategorien
+        let stats = MempoolStats {
+            tx_count,
+            size,
+            no_priority: categories[0].clone(),
+            low_priority: categories[1].clone(),
+            medium_priority: categories[2].clone(),
+            high_priority: categories[3].clone(),
+        };
 
         // Cache aktualisieren
-        if let Ok(mut cache_lock) = MEMPOOL_CACHE.lock() {
-            *cache_lock = Some(MempoolCache {
+        if let Ok(mut cache) = MEMPOOL_CACHE.lock() {
+            *cache = Some(MempoolCache {
                 stats: stats.clone(),
                 last_update: Instant::now(),
             });
         }
 
         Ok(stats)
-    }
-
-    fn fetch_mempool_stats(&self) -> Result<MempoolStats> {
-        // Parallele Abfragen mit join statt join4
-        let (info, raw_mempool) = rayon::join(
-            || self.client.get_mempool_info(),
-            || self.client.call::<Value>("getrawmempool", &[true.into()])
-        );
-
-        let (estimate_low, estimate_high) = rayon::join(
-            || self.client.call::<Value>("estimatesmartfee", &[144.into()]),
-            || self.client.call::<Value>("estimatesmartfee", &[2.into()])
-        );
-
-        let info = info?;
-        let raw_mempool = raw_mempool?;
-        let estimate_low = estimate_low?;
-        let estimate_high = estimate_high?;
-
-        // Gebühren in sat/vB umrechnen
-        let get_fee_rate = |v: &Value| -> f64 {
-            v.get("feerate")
-                .and_then(|f| f.as_f64())
-                .map(|btc| btc * 100_000.0) // BTC/kB zu sat/vB
-                .unwrap_or(0.0)
-        };
-
-        let low_rate = get_fee_rate(&estimate_low);
-        let high_rate = get_fee_rate(&estimate_high);
-        let medium_rate = (low_rate + high_rate) / 2.0;
-
-        let category_rates = [
-            1.0,           // No Priority (Minimum)
-            low_rate,      // Low Priority (~24h)
-            medium_rate,   // Medium Priority (~12h)
-            high_rate,     // High Priority (~20min)
-        ];
-
-        // Rest des Codes wie gehabt...
-        let mut categories = vec![
-            FeeCategory { count: 0, rate: 0.0, usd_price: 0.0 },
-            FeeCategory { count: 0, rate: 0.0, usd_price: 0.0 },
-            FeeCategory { count: 0, rate: 0.0, usd_price: 0.0 },
-            FeeCategory { count: 0, rate: 0.0, usd_price: 0.0 },
-        ];
-
-        // Zähle Transaktionen in den entsprechenden Kategorien
-        if let Some(txs) = raw_mempool.as_object() {
-            for tx in txs.values() {
-                if let Some(fee_rate) = tx.get("fees")
-                    .and_then(|f| f.get("base"))
-                    .and_then(|b| b.as_f64())
-                    .map(|f| f * 100_000_000.0)
-                {
-                    let idx = match fee_rate {
-                        r if r <= category_rates[0] => 0,
-                        r if r <= category_rates[1] => 1,
-                        r if r <= category_rates[2] => 2,
-                        _ => 3,
-                    };
-                    categories[idx].count += 1;
-                }
-            }
-        }
-
-        // Setze die geschätzten Gebühren
-        let btc_price = 43000.0; // TODO: Echten Preis via API abrufen
-        for (idx, category) in categories.iter_mut().enumerate() {
-            category.rate = category_rates[idx];
-            category.usd_price = (category.rate * 250.0 * btc_price) / 100_000_000.0;
-        }
-
-        Ok(MempoolStats {
-            tx_count: info.size as u64,
-            size: info.bytes as u64,
-            memory_usage: info.usage as u64,
-            max_memory: info.max_mempool as u64,
-            no_priority: categories[0].clone(),
-            low_priority: categories[1].clone(),
-            medium_priority: categories[2].clone(),
-            high_priority: categories[3].clone(),
-        })
     }
 } 

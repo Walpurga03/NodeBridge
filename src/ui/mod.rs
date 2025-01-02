@@ -7,7 +7,7 @@ mod common;
 use std::io;
 use std::time::{Duration, Instant};
 use crossterm::{
-    event::{self, Event, KeyCode, DisableMouseCapture, EnableMouseCapture},
+    event::{self, Event, KeyCode, KeyEvent, DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen},
 };
@@ -22,8 +22,6 @@ use crate::rpc::{BitcoinRPC, NodeStatus};
 pub use crate::ui::tabs::block_details::BlockSearchMode;
 use crate::ui::tabs::tx_details::TxMode;
 use crate::ui::tabs::address_details::AddressMode;
-
-pub(crate) use common::*;
 
 #[derive(PartialEq)]
 pub enum Tab {
@@ -55,8 +53,7 @@ pub struct UI {
     block_search_mode: BlockSearchMode,
     tx_mode: Option<TxMode>,
     address_mode: Option<AddressMode>,
-    input: Option<String>,
-    last_status_time: Instant,
+    should_quit: bool,
 }
 
 #[derive(Clone)]
@@ -69,7 +66,6 @@ pub struct StatusMessage {
 #[derive(Clone, PartialEq)]
 pub enum MessageLevel {
     Info,
-    Warning,
     #[allow(dead_code)]
     Error,
 }
@@ -100,12 +96,11 @@ impl UI {
             block_input_active: false,
             block_input: String::new(),
             block_search_mode: initial_block_mode,
-            tx_mode: initial_tx.or(Some("bcac1259b3faf4d01f8f0d99d5340576f197553a899e058ea3833fe5f82e0345".to_string()))
-                .map(|txid| TxMode { txid }),
-            address_mode: initial_addr.or(Some("bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd".to_string()))
+            tx_mode: initial_tx
+                .map(|txid| TxMode::new(txid)),
+            address_mode: initial_addr
                 .map(|address| AddressMode { address }),
-            input: None,
-            last_status_time: Instant::now(),
+            should_quit: false,
         })
     }
 
@@ -154,7 +149,7 @@ impl UI {
     pub fn run(&mut self) -> anyhow::Result<()> {
         self.try_connect()?;
 
-        loop {
+        while !self.should_quit {
             // Alte Nachrichten entfernen
             self.cleanup_old_messages();
 
@@ -219,56 +214,7 @@ impl UI {
             // Event handling
             if crossterm::event::poll(Duration::from_millis(250))? {
                 if let Event::Key(key) = event::read()? {
-                    match key.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('r') if self.connection_state == ConnectionState::Connected => 
-                            self.refresh_data()?,
-                        KeyCode::Char('c') if self.connection_state != ConnectionState::Connected => 
-                            self.try_connect()?,
-                        KeyCode::Char('h') => self.show_help = !self.show_help,
-                        KeyCode::Char('+') => self.increase_update_interval(),
-                        KeyCode::Char('-') => self.decrease_update_interval(),
-                        KeyCode::Char('1') => self.current_tab = Tab::Dashboard,
-                        KeyCode::Char('2') => self.current_tab = Tab::BlockDetails,
-                        KeyCode::Char('3') => self.current_tab = Tab::TxDetails,
-                        KeyCode::Char('4') => self.current_tab = Tab::AddressDetails,
-                        KeyCode::Char('5') => self.current_tab = Tab::Mempool,
-                        KeyCode::Char('6') => self.current_tab = Tab::Network,
-                        KeyCode::Char('7') => self.current_tab = Tab::PeerList,
-                        KeyCode::Char('8') => self.current_tab = Tab::Mining,
-                        KeyCode::Char('9') => self.current_tab = Tab::Security,
-                        KeyCode::Enter if self.current_tab == Tab::BlockDetails => {
-                            if self.block_input_active {
-                                if !self.block_input.is_empty() {
-                                    self.block_search_mode = BlockSearchMode::Custom(self.block_input.clone());
-                                }
-                                self.block_input_active = false;
-                            } else {
-                                self.block_input_active = true;
-                                self.block_input.clear();
-                                self.block_search_mode = BlockSearchMode::Latest;
-                            }
-                        },
-                        KeyCode::Esc => {
-                            if self.current_tab == Tab::BlockDetails && self.block_input_active {
-                                // Im Block-Details Tab: Eingabemodus beenden
-                                self.block_input_active = false;
-                                self.block_input.clear();
-                                self.block_search_mode = BlockSearchMode::Latest;
-                            } else {
-                                // In anderen Tabs: Hilfe ausblenden
-                                self.show_help = false;
-                            }
-                        },
-                        KeyCode::Char(c) if self.block_input_active => {
-                            println!("Char input: {}", c); // Debug-Ausgabe
-                            self.block_input.push(c);
-                        },
-                        KeyCode::Backspace if self.block_input_active => {
-                            self.block_input.pop();
-                        },
-                        _ => {}
-                    }
+                    self.handle_input(key);
                 }
             }
         }
@@ -327,11 +273,40 @@ impl UI {
             msg.timestamp.elapsed() < Duration::from_secs(5)  // 5 Sekunden anzeigen
         });
     }
-}
 
-fn format_timestamp(timestamp: i64) -> String {
-    let dt: DateTime<Utc> = Utc.timestamp_opt(timestamp, 0).unwrap();
-    dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+    pub fn handle_input(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Char('Q') => {
+                self.should_quit = true;
+            },
+            KeyCode::Char('h') | KeyCode::Char('H') => {
+                self.show_help = !self.show_help;
+            },
+            KeyCode::Char('c') | KeyCode::Char('C') => {
+                if let Some(tx_mode) = &mut self.tx_mode {
+                    tx_mode.toggle_copy_mode();
+                }
+            },
+            KeyCode::Esc => {
+                if let Some(tx_mode) = &mut self.tx_mode {
+                    tx_mode.copy_mode = false;
+                }
+            },
+            KeyCode::Char('r') if self.connection_state == ConnectionState::Connected => {
+                let _ = self.refresh_data();
+            },
+            KeyCode::Char('1') => self.current_tab = Tab::Dashboard,
+            KeyCode::Char('2') => self.current_tab = Tab::BlockDetails,
+            KeyCode::Char('3') => self.current_tab = Tab::TxDetails,
+            KeyCode::Char('4') => self.current_tab = Tab::AddressDetails,
+            KeyCode::Char('5') => self.current_tab = Tab::Mempool,
+            KeyCode::Char('6') => self.current_tab = Tab::Network,
+            KeyCode::Char('7') => self.current_tab = Tab::PeerList,
+            KeyCode::Char('8') => self.current_tab = Tab::Mining,
+            KeyCode::Char('9') => self.current_tab = Tab::Security,
+            _ => {}
+        }
+    }
 }
 
 impl Drop for UI {

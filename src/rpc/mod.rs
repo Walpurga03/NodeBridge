@@ -2,22 +2,21 @@ use std::env;
 use std::time::{Duration, Instant};
 use std::str::FromStr;
 use bitcoincore_rpc::{Client, Auth, RpcApi};
-use bitcoincore_rpc::bitcoin::BlockHash;
+use bitcoincore_rpc::bitcoin::{self, BlockHash};
 use dotenv::dotenv;
 use anyhow::Result;
 use hex;
 use serde_json::{Value, json};
-use bitcoincore_rpc::Error;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::collections::HashMap;
 use parking_lot::Mutex;
 use once_cell::sync::Lazy;
 use reqwest::blocking::Client as HttpClient;
+use log::{info};
 
 // Re-export wichtiger Typen
 pub use self::mempool::MempoolStats;
-pub mod explorer;  // Neues Modul hinzufügen
 
 // Module
 mod mempool;
@@ -65,13 +64,10 @@ pub struct PeerInfo {
     pub version: u64,
     pub subver: String,
     pub latency: f64,
-    pub ping: f64,
-    pub connected_time: u64,
-    pub last_send: u64,
-    pub last_recv: u64,
     pub bytes_sent: u64,
     pub bytes_recv: u64,
     pub inbound: bool,
+    pub connected_time: u64,
 }
 
 #[derive(Debug)]
@@ -94,30 +90,18 @@ pub struct AddressDetails {
     pub received: f64,
     pub sent: f64,
     pub balance: f64,
-    pub first_seen: i64,
-    pub last_seen: i64,
-    pub funded_txo_count: usize,   // Anzahl empfangener Outputs
-    pub spent_txo_count: usize,    // Anzahl ausgegebener Outputs
-    pub unspent_txo_count: usize,  // Anzahl unausgegebener Outputs
-    pub has_mempool_tx: bool,      // Hat unbestätigte Transaktionen
-    pub address_type: String,      // z.B. "p2wpkh" (native segwit)
+    pub funded_txo_count: usize,
+    pub spent_txo_count: usize,
+    pub unspent_txo_count: usize,
+    pub has_mempool_tx: bool,
+    pub address_type: String,
 }
 
 pub trait BitcoinRPCInterface: Clone {
-    fn get_address_balance(&self, address: &str) -> Result<f64>;
-    fn get_address_tx_count(&self, address: &str) -> Result<usize>;
     fn get_address_details(&self, address: &str) -> Result<AddressDetails>;
 }
 
 impl BitcoinRPCInterface for BitcoinRPC {
-    fn get_address_balance(&self, address: &str) -> Result<f64> {
-        self.get_address_balance(address)
-    }
-
-    fn get_address_tx_count(&self, address: &str) -> Result<usize> {
-        self.get_address_tx_count(address)
-    }
-
     fn get_address_details(&self, address: &str) -> Result<AddressDetails> {
         self.get_address_details(address)
     }
@@ -133,6 +117,18 @@ struct AddressDetailsCache {
 static ADDRESS_DETAILS_CACHE: Lazy<Mutex<HashMap<String, AddressDetailsCache>>> = Lazy::new(|| {
     Mutex::new(HashMap::new())
 });
+
+#[derive(Debug)]
+pub struct Transaction {
+    #[allow(dead_code)]
+    pub txid: String,
+    pub size: u32,
+    pub weight: u32,
+    pub blocktime: Option<u64>,
+    pub blockhash: Option<String>,
+    pub vin: Vec<Value>,
+    pub vout: Vec<Value>,
+}
 
 impl BitcoinRPC {
     pub fn new() -> anyhow::Result<Self> {
@@ -263,13 +259,10 @@ impl BitcoinRPC {
             version: p.version as u64,
             subver: p.subver,
             latency: p.pingtime.unwrap_or(0.0),
-            ping: p.minping.unwrap_or(0.0),
-            connected_time: p.conntime as u64,
-            last_send: p.lastsend as u64,
-            last_recv: p.lastrecv as u64,
             bytes_sent: p.bytessent as u64,
             bytes_recv: p.bytesrecv as u64,
             inbound: p.inbound,
+            connected_time: p.conntime as u64,
         }).collect())
     }
 
@@ -323,59 +316,6 @@ impl BitcoinRPC {
         }
     }
 
-    pub fn get_explorer_address(&self, address: &str) -> Result<Value, Error> {
-        let mut address_info = json!({
-            "address": address
-        });
-
-        // Adressinformationen von der Node abfragen
-        if let Ok(addr_info) = self.client.call::<Value>("getaddressinfo", &[json!(address)]) {
-            // Grundlegende Informationen von der Node
-            address_info["type"] = addr_info.get("type").unwrap_or(&json!("unknown")).clone();
-            address_info["scriptPubKey"] = addr_info.get("scriptPubKey").unwrap_or(&json!({})).clone();
-            address_info["ismine"] = addr_info.get("ismine").unwrap_or(&json!(false)).clone();
-            address_info["iswatchonly"] = addr_info.get("iswatchonly").unwrap_or(&json!(false)).clone();
-            address_info["solvable"] = addr_info.get("solvable").unwrap_or(&json!(false)).clone();
-        }
-
-        // UTXO Informationen von der Node abfragen
-        if let Ok(utxos) = self.client.call::<Value>("listunspent", &[json!(0), json!(9999999), json!([address])]) {
-            address_info["utxos"] = utxos;
-        }
-
-        // Transaktionshistorie von der Node abfragen
-        if let Ok(history) = self.client.call::<Value>("listtransactions", &[json!("*"), json!(10), json!(0), json!(true)]) {
-            let addr_txs: Vec<_> = history.as_array()
-                .unwrap_or(&Vec::new())
-                .iter()
-                .filter(|tx| tx.get("address").and_then(|a| a.as_str()) == Some(address))
-                .cloned()
-                .collect();
-            
-            address_info["transactions"] = json!(addr_txs);
-        }
-
-        Ok(address_info)
-    }
-
-    pub fn get_address_balance(&self, address: &str) -> Result<f64> {
-        let descriptor = format!("addr({})", address);
-        let scan_result = self.client.call::<Value>(
-            "scantxoutset",
-            &[
-                json!("start"),
-                json!([descriptor])
-            ]
-        )?;
-
-        let total_amount = scan_result
-            .get("total_amount")
-            .and_then(|t| t.as_f64())
-            .unwrap_or(0.0);
-
-        Ok(total_amount)
-    }
-
     fn log_debug(&self, msg: &str) {
         static FIRST_CALL: std::sync::Once = std::sync::Once::new();
         
@@ -394,36 +334,6 @@ impl BitcoinRPC {
         {
             let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
             let _ = writeln!(file, "[{}] {}", timestamp, msg);
-        }
-    }
-
-    pub fn get_address_tx_count(&self, address: &str) -> Result<usize> {
-        self.log_debug(&format!("Abfrage mempool.space API für Adresse {}", address));
-        
-        // HTTP Client für mempool.space API
-        let client = HttpClient::new();
-        let url = format!("https://mempool.space/api/address/{}", address);
-        
-        match client.get(&url).send() {
-            Ok(response) => {
-                if response.status().is_success() {
-                    let data: Value = response.json()?;
-                    let tx_count = data.get("chain_stats")
-                        .and_then(|stats| stats.get("tx_count"))
-                        .and_then(|count| count.as_u64())
-                        .unwrap_or(0) as usize;
-                    
-                    self.log_debug(&format!("Gefunden: {} Transaktionen", tx_count));
-                    Ok(tx_count)
-                } else {
-                    self.log_debug(&format!("API Fehler: {}", response.status()));
-                    Ok(0)
-                }
-            },
-            Err(e) => {
-                self.log_debug(&format!("Netzwerk Fehler: {}", e));
-                Ok(0)
-            }
         }
     }
 
@@ -485,11 +395,11 @@ impl BitcoinRPC {
                     let balance = received - sent;
 
                     // Erste/Letzte Aktivität
-                    let first_seen = chain_stats.get("first_seen")
+                    let _first_seen = chain_stats.get("first_seen")
                         .and_then(|v| v.as_i64())
                         .unwrap_or(0);
                     
-                    let last_seen = chain_stats.get("last_seen")
+                    let _last_seen = chain_stats.get("last_seen")
                         .and_then(|v| v.as_i64())
                         .unwrap_or(0);
 
@@ -528,8 +438,6 @@ impl BitcoinRPC {
                         received,
                         sent,
                         balance,
-                        first_seen,
-                        last_seen,
                         funded_txo_count,
                         spent_txo_count,
                         unspent_txo_count,
@@ -554,5 +462,84 @@ impl BitcoinRPC {
                 Err(anyhow::anyhow!("Netzwerk Fehler: {}", e))
             }
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_explorer_transaction(&self, txid: &str) -> Result<Value> {
+        // Implementierung der Transaktion-Details hier
+        // Ähnlich wie get_address_details, aber für Transaktionen
+        let client = HttpClient::new();
+        let url = format!("https://mempool.space/api/tx/{}", txid);
+        
+        match client.get(&url).send() {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let data: Value = response.json()?;
+                    Ok(data)
+                } else {
+                    Err(anyhow::anyhow!("API Fehler: {}", response.status()))
+                }
+            },
+            Err(e) => Err(anyhow::anyhow!("Netzwerk Fehler: {}", e))
+        }
+    }
+
+    pub fn get_raw_transaction(&self, txid: &str) -> Result<Transaction> {
+        let tx_id = bitcoin::Txid::from_str(txid)?;
+        let raw_tx = self.client.get_raw_transaction(&tx_id, None)?;
+        let tx_info = self.client.get_raw_transaction_info(&tx_id, None)?;
+        
+        Ok(Transaction {
+            txid: tx_info.txid.to_string(),
+            size: tx_info.size as u32,
+            weight: tx_info.vsize as u32,
+            blocktime: tx_info.blocktime.map(|t| t as u64),
+            blockhash: tx_info.blockhash.map(|h| h.to_string()),
+            vin: raw_tx.input.iter().map(|input| {
+                let prev_tx = self.client.get_raw_transaction_info(&input.previous_output.txid, None).ok();
+                let prev_output = prev_tx.as_ref()
+                    .and_then(|tx| tx.vout.get(input.previous_output.vout as usize));
+                
+                json!({
+                    "txid": input.previous_output.txid.to_string(),
+                    "vout": input.previous_output.vout,
+                    "value": prev_output.map(|out| out.value.to_btc()).unwrap_or(0.0),
+                    "address": prev_output
+                        .and_then(|out| {
+                            let hex_bytes = hex::decode(&out.script_pub_key.hex).unwrap_or_default();
+                            let script = bitcoin::Script::from_bytes(&hex_bytes);
+                            bitcoin::Address::from_script(&script, bitcoin::Network::Bitcoin)
+                                .ok()
+                                .map(|addr| addr.to_string())
+                        })
+                        .unwrap_or_else(|| "Unbekannte Adresse".to_string())
+                })
+            }).collect(),
+            vout: raw_tx.output.iter().map(|output| {
+                json!({
+                    "value": bitcoin::Amount::from_sat(output.value).to_btc(),
+                    "scriptPubKey": {
+                        "address": match bitcoin::Address::from_script(&output.script_pubkey, bitcoin::Network::Bitcoin) {
+                            Ok(addr) => addr.to_string(),
+                            Err(_) => "Unbekannte Adresse".to_string()
+                        }
+                    }
+                })
+            }).collect(),
+        })
+    }
+
+    #[allow(dead_code)]
+    pub fn connect_rpc() -> Result<Client> {
+        info!("Verbindung zum Bitcoin RPC-Client wird hergestellt.");
+        // Verbindungslogik
+        // Beispielhafte Initialisierung, passen Sie dies entsprechend Ihrer Implementierung an
+        let rpc_url = "http://localhost:8332";
+        let rpc_user = "your_rpc_username";
+        let rpc_password = "your_rpc_password";
+        let auth = Auth::UserPass(rpc_user.to_string(), rpc_password.to_string());
+        let client = Client::new(rpc_url, auth)?;
+        info!("Verbindung erfolgreich hergestellt.");
+        Ok(client)
     }
 } 

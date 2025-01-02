@@ -1,1 +1,36 @@
 === Debug Log Start ===
+[2025-01-02 20:06:59] Abfrage mempool.space API für Adresse bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd
+[2025-01-02 20:06:59] API Antwort: {
+  "address": "bc1p38hzyl8p5yyqnzgkcxttr6ac0wc0ae8gpv7rld79df88qkrva38s78e8wd",
+  "chain_stats": {
+    "funded_txo_count": 1,
+    "funded_txo_sum": 145124500,
+    "spent_txo_count": 1,
+    "spent_txo_sum": 145124500,
+    "tx_count": 2
+  },
+  "mempool_stats": {
+    "funded_txo_count": 0,
+    "funded_txo_sum": 0,
+    "spent_txo_count": 0,
+    "spent_txo_sum": 0,
+    "tx_count": 0
+  }
+}
+[2025-01-02 20:06:59] Chain Stats: {
+  "funded_txo_count": 1,
+  "funded_txo_sum": 145124500,
+  "spent_txo_count": 1,
+  "spent_txo_sum": 145124500,
+  "tx_count": 2
+}
+[2025-01-02 20:06:59] Mempool Stats: {
+  "funded_txo_count": 0,
+  "funded_txo_sum": 0,
+  "spent_txo_count": 0,
+  "spent_txo_sum": 0,
+  "tx_count": 0
+}
+[2025-01-02 20:06:59] Received: chain=0, mempool=0
+[2025-01-02 20:06:59] Spent: chain=0, mempool=0
+[2025-01-02 20:06:59] Details gefunden: 2 Transaktionen, 0.00000000 BTC Balance

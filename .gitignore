@@ -1,15 +1,19 @@
-venv/
-.env
-__pycache__/
-
-
-# Added by cargo
-
+# Rust
 /target
+**/*.rs.bk
 
+# Env files
+.env
+.env.*
 
-# Added by cargo
-#
-# already existing elements were commented out
+# Logs
+*.log
++ debug.log
 
-#/target
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/

@@ -11,6 +11,8 @@ NodeBridge soll eine benutzerfreundliche, ressourcenschonende Schnittstelle zwis
 - **APIs**: 
   - Bitcoin Core RPC
   - mempool.space API
+- **Logging**: log, env_logger
+- **Asynchrone Laufzeit**: tokio
 - **Weitere Tools**:
   - dotenv (Konfiguration)
   - anyhow (Fehlerbehandlung)
@@ -42,6 +44,15 @@ NodeBridge soll eine benutzerfreundliche, ressourcenschonende Schnittstelle zwis
 - Echtzeit-Updates
 - Hilfe-System
 - Farbkodierung
+
+### 5. Wallet-Integration
+- Verbindung zu verschiedenen Wallets
+- Verwaltung von Wallet-Adressen
+- Transaktionssignierung
+
+### 6. Multi-Address-Support
+- Unterstützung für mehrere Bitcoin-Adressen
+- Synchronisation von Adressdaten
 
 ## 🎨 Design-Prinzipien
 1. **Benutzerfreundlichkeit**

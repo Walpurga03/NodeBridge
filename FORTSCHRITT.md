@@ -33,6 +33,8 @@
 - [ ] Verbessertes Error-Handling
 - [ ] Performance-Optimierungen
 - [ ] Dokumentation vervollständigen
+- [ ] Wallet-Integration
+- [ ] Multi-Adress-Support
 
 ## 📝 Geplant
 - [ ] Wallet-Integration
@@ -40,11 +42,13 @@
 - [ ] Multi-Adress-Support
 - [ ] Export-Funktionen
 - [ ] Internationalisierung
+- [ ] Erweiterte Sicherheitsfunktionen
 
 ## ❌ Bekannte Probleme
 - [ ] Rate-Limiting bei API-Anfragen
 - [ ] Speicherverbrauch bei langen Sitzungen
 - [ ] Gelegentliche UI-Verzögerungen
+- [ ] Synchronisationsprobleme mit mehreren Wallets
 
 ## 📊 Statistiken
 - Implementierte Module: 8
