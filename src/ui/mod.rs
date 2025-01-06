@@ -7,7 +7,7 @@ mod common;
 use std::io;
 use std::time::{Duration, Instant};
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, DisableMouseCapture, EnableMouseCapture},
+    event::{self, Event, KeyCode, KeyEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen},
 };
@@ -49,11 +49,14 @@ pub struct UI {
     connection_state: ConnectionState,
     status_messages: Vec<StatusMessage>,
     block_input_active: bool,
+    #[allow(dead_code)]
     block_input: String,
     block_search_mode: BlockSearchMode,
     tx_mode: Option<TxMode>,
     address_mode: Option<AddressMode>,
     should_quit: bool,
+    blocks_until_adjustment: i64,
+    next_difficulty_estimate: f64,
 }
 
 #[derive(Clone)]
@@ -76,8 +79,7 @@ impl UI {
                initial_addr: Option<String>) -> anyhow::Result<Self> {
         // Terminal in Raw-Mode versetzen
         enable_raw_mode()?;
-        let mut stdout = io::stdout();
-        execute!(stdout, EnableMouseCapture)?;
+        let stdout = io::stdout();
         
         let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
         
@@ -96,11 +98,11 @@ impl UI {
             block_input_active: false,
             block_input: String::new(),
             block_search_mode: initial_block_mode,
-            tx_mode: initial_tx
-                .map(|txid| TxMode::new(txid)),
-            address_mode: initial_addr
-                .map(|address| AddressMode { address }),
+            tx_mode: initial_tx.map(|txid| TxMode::new(txid)),
+            address_mode: initial_addr.map(|address| AddressMode { address }),
             should_quit: false,
+            blocks_until_adjustment: 0,
+            next_difficulty_estimate: 0.0,
         })
     }
 
@@ -110,7 +112,6 @@ impl UI {
         execute!(
             self.terminal.backend_mut(),
             LeaveAlternateScreen,
-            DisableMouseCapture
         )?;
         self.terminal.show_cursor()?;
         Ok(())
@@ -150,10 +151,9 @@ impl UI {
         self.try_connect()?;
 
         while !self.should_quit {
-            // Alte Nachrichten entfernen
             self.cleanup_old_messages();
 
-            // Verbindungsstatus prüfen und anzeigen
+            // UI rendern
             self.terminal.draw(|f| {
                 match self.connection_state {
                     ConnectionState::Connecting => {
@@ -202,33 +202,33 @@ impl UI {
                 }
             })?;
 
-            // Wenn verbunden, normale Updates durchführen
-            if self.connection_state == ConnectionState::Connected {
-                if self.last_update.elapsed() >= self.update_interval {
-                    if let Err(e) = self.refresh_data() {
-                        self.connection_state = ConnectionState::Error(format!("Update fehlgeschlagen: {}", e));
-                    }
-                }
-            }
-
             // Event handling
             if crossterm::event::poll(Duration::from_millis(250))? {
-                if let Event::Key(key) = event::read()? {
-                    self.handle_input(key);
+                match event::read()? {
+                    Event::Key(key) => self.handle_input(key),
+                    _ => {}
                 }
             }
         }
         Ok(())
     }
 
-    fn refresh_data(&mut self) -> anyhow::Result<()> {
+    pub fn update(&mut self) -> anyhow::Result<()> {
         self.is_updating = true;
         self.spinner_state = (self.spinner_state + 1) % 4;
 
         let result = if let Some(client) = &self.rpc_client {
             match client.test_connection() {
                 Ok(info) => {
+                    let difficulty = info.difficulty;
                     self.node_info = Some(info);
+                    
+                    // Difficulty-Anpassung berechnen
+                    if let Ok((blocks_until, adjustment)) = client.get_difficulty_adjustment_estimate() {
+                        self.blocks_until_adjustment = blocks_until;
+                        self.next_difficulty_estimate = difficulty * (1.0 + adjustment / 100.0);
+                    }
+                    
                     self.last_update = Instant::now();
                     Ok(())
                 }
@@ -241,10 +241,11 @@ impl UI {
             Ok(())
         };
 
-        self.is_updating = false;  // Status zurücksetzen
+        self.is_updating = false;
         result
     }
 
+    #[allow(dead_code)]
     fn increase_update_interval(&mut self) {
         let secs = self.update_interval.as_secs();
         if secs < 60 {  // Maximum 60 Sekunden
@@ -252,6 +253,7 @@ impl UI {
         }
     }
 
+    #[allow(dead_code)]
     fn decrease_update_interval(&mut self) {
         let secs = self.update_interval.as_secs();
         if secs > 1 {  // Minimum 1 Sekunde
@@ -282,18 +284,8 @@ impl UI {
             KeyCode::Char('h') | KeyCode::Char('H') => {
                 self.show_help = !self.show_help;
             },
-            KeyCode::Char('c') | KeyCode::Char('C') => {
-                if let Some(tx_mode) = &mut self.tx_mode {
-                    tx_mode.toggle_copy_mode();
-                }
-            },
-            KeyCode::Esc => {
-                if let Some(tx_mode) = &mut self.tx_mode {
-                    tx_mode.copy_mode = false;
-                }
-            },
             KeyCode::Char('r') if self.connection_state == ConnectionState::Connected => {
-                let _ = self.refresh_data();
+                let _ = self.update();
             },
             KeyCode::Char('1') => self.current_tab = Tab::Dashboard,
             KeyCode::Char('2') => self.current_tab = Tab::BlockDetails,
@@ -315,7 +307,6 @@ impl Drop for UI {
         execute!(
             self.terminal.backend_mut(),
             LeaveAlternateScreen,
-            DisableMouseCapture
         ).unwrap();
     }
 }

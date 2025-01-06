@@ -32,13 +32,13 @@ impl Clone for BitcoinRPC {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MempoolInfo {
     #[allow(dead_code)]
     pub size: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeStatus {
     pub version: u64,
     pub height: u64,
@@ -49,9 +49,9 @@ pub struct NodeStatus {
     pub mempool_size: u64,      
     pub network: String,        
     pub mempool_info: MempoolInfo,
-    pub peers: Vec<PeerInfo>,  // Neue Peer-Informationen
+    pub peers: Vec<PeerInfo>,
     pub difficulty: f64,
-    pub chain_work: String,  // Neues Feld
+    pub chain_work: String,
     pub initial_block_download: bool,
     pub size_on_disk: u64,
     pub pruned: bool,
@@ -541,5 +541,33 @@ impl BitcoinRPC {
         let client = Client::new(rpc_url, auth)?;
         info!("Verbindung erfolgreich hergestellt.");
         Ok(client)
+    }
+
+    pub fn get_difficulty_adjustment_estimate(&self) -> Result<(i64, f64)> {
+        let height = self.client.get_block_count()? as u64;
+        let last_adjustment = height - (height % 2016);
+        let blocks_until = 2016 - (height % 2016) as i64;
+        
+        // Hole Zeitstempel des letzten Anpassungsblocks
+        let last_adjustment_hash = self.client.get_block_hash(last_adjustment)?;
+        let last_adjustment_time = self.client.get_block_header_info(&last_adjustment_hash)?.time;
+        
+        // Hole aktuellen Block-Zeitstempel
+        let current_hash = self.client.get_best_block_hash()?;
+        let current_time = self.client.get_block_header_info(&current_hash)?.time;
+        
+        // Berechne durchschnittliche Blockzeit
+        let elapsed_time = current_time - last_adjustment_time;
+        let blocks_since = height - last_adjustment;
+        let avg_block_time = elapsed_time as f64 / blocks_since as f64;
+        
+        // Extrapoliere auf 2016 Blöcke
+        let expected_time = 2016.0 * 600.0; // 2016 Blöcke * 10 Minuten
+        let projected_time = avg_block_time * 2016.0;
+        
+        // Berechne geschätzte Anpassung
+        let adjustment = (expected_time / projected_time - 1.0) * 100.0;
+        
+        Ok((blocks_until, adjustment))
     }
 } 

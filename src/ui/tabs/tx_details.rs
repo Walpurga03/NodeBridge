@@ -5,19 +5,13 @@ use chrono::{DateTime, Utc};
 #[derive(Clone)]
 pub struct TxMode {
     pub txid: String,
-    pub copy_mode: bool,
 }
 
 impl TxMode {
     pub fn new(txid: String) -> Self {
         Self {
             txid,
-            copy_mode: false,
         }
-    }
-
-    pub fn toggle_copy_mode(&mut self) {
-        self.copy_mode = !self.copy_mode;
     }
 }
 
@@ -34,33 +28,13 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                         Line::from(""),
                     ];
 
-                    // Kopier-Modus Status
-                    if tx_mode.copy_mode {
-                        lines.push(Line::from(vec![
-                            Span::styled("📋 Kopier-Modus aktiv (ESC zum Beenden)", 
-                                Style::default().fg(Color::Green))
-                        ]));
-                        lines.push(Line::from(""));
-                    } else {
-                        lines.push(Line::from(vec![
-                            Span::styled("Drücke 'C' für Kopier-Modus", 
-                                Style::default().fg(Color::Gray))
-                        ]));
-                        lines.push(Line::from(""));
-                    }
-
-                    // TXID mit Kopier-Modus
-                    let txid_style = if tx_mode.copy_mode {
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default()
-                    };
-
+                    // TXID
                     lines.push(Line::from(vec![
                         Span::raw("TXID: "),
-                        Span::styled(tx_mode.txid.clone(), txid_style)
+                        Span::styled(
+                            tx_mode.txid.clone(),
+                            Style::default().fg(Color::White)
+                        )
                     ]));
 
                     // Prüfen ob es eine Coinbase TX ist
@@ -101,7 +75,7 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                                         Span::styled(
                                             txid.and_then(|v| v.as_str().map(|s| s.to_string()))
                                                 .unwrap_or_else(|| "Unbekannt".to_string()),
-                                            Style::default().add_modifier(Modifier::REVERSED)
+                                            Style::default()
                                         )
                                     ]));
                                     lines.push(Line::from(vec![
@@ -109,7 +83,7 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                                         Span::styled(
                                             addr.as_str().map(|s| s.to_string())
                                                 .unwrap_or_else(|| "Unbekannt".to_string()),
-                                            Style::default().add_modifier(Modifier::REVERSED)
+                                            Style::default()
                                         )
                                     ]));
                                 }
@@ -135,7 +109,7 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                                     Span::raw("   TX: "),
                                     Span::styled(
                                         format!("{}:{}", tx_mode.txid, index),
-                                        Style::default().add_modifier(Modifier::REVERSED)
+                                        Style::default()
                                     )
                                 ]));
                                 if let Some(script_pub_key) = script_pub_key {
@@ -145,7 +119,7 @@ pub fn render(mode: Option<&TxMode>, rpc_client: &Option<BitcoinRPC>) -> Paragra
                                             Span::styled(
                                                 addr.as_str().map(|s| s.to_string())
                                                     .unwrap_or_else(|| "Unbekannt".to_string()),
-                                                Style::default().add_modifier(Modifier::REVERSED)
+                                                Style::default()
                                             )
                                         ]));
                                     }

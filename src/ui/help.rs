@@ -7,78 +7,13 @@ pub fn create_help(tab: &Tab, _scroll: usize) -> Paragraph<'static> {
     let content = match tab {
         Tab::Dashboard => create_dashboard_help(),
         Tab::BlockDetails => create_block_help(),
-        Tab::TxDetails => vec![
-            Line::from(vec![
-                Span::styled("Transaktionsdetails", 
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("💰 Inputs & Outputs", 
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
-            ]),
-            Line::from(" • Inputs zeigen die Herkunft der Bitcoins:"),
-            Line::from("   - Format: X.XXX BTC (TX: [txid])"),
-            Line::from("   - Referenzieren frühere Transaktionen"),
-            Line::from("   - Summe der Inputs = Summe der Outputs + Transaktionsgebühr"),
-            Line::from(""),
-            Line::from(" • Outputs (UTXOs):"),
-            Line::from("   - Format: X.XXX BTC (TX: [aktuelle_txid]:[index])"),
-            Line::from("   - Alle Outputs einer TX teilen sich die gleiche TXID"),
-            Line::from("   - Der Index unterscheidet die verschiedenen Outputs"),
-            Line::from("   - Jeder Output geht an eine andere Bitcoin-Adresse"),
-            Line::from("   - Beispiel für eine TX mit ID 'def456':"),
-            Line::from("     Input:  1.5 BTC von 1ABC... (TX: abc123...)"),
-            Line::from("     Output: 1.0 BTC an bc1GHI... (TX: def456:0)"),
-            Line::from("     Output: 0.49 BTC an 3JKL... (TX: def456:1)"),
-            Line::from("     Gebühr: 0.01 BTC an den Miner"),
-            Line::from(""),
-            Line::from(" • Wichtig zu verstehen:"),
-            Line::from("   - Inputs verweisen auf frühere Transaktionen"),
-            Line::from("   - Outputs sind Teil der aktuellen Transaktion"),
-            Line::from("   - Outputs werden später als Inputs verwendet"),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("📊 Technische Details", 
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
-            ]),
-            Line::from(" • Größe in Bytes:"),
-            Line::from("   - Tatsächlicher Speicherplatz auf der Blockchain"),
-            Line::from("   - Enthält alle Transaktionsdaten (Inputs, Outputs, Signaturen)"),
-            Line::from("   - 1 Byte = 8 Bit (kleinste Speichereinheit)"),
-            Line::from(""),
-            Line::from(" • Virtuelle Größe (vBytes):"),
-            Line::from("   - Spezielle Einheit für SegWit-Transaktionen"),
-            Line::from("   - Basis für die Gebührenberechnung"),
-            Line::from("   - Reduziert die effektive Größe von Witness-Daten"),
-            Line::from("   - 1 vByte = 4 Weight Units (WU)"),
-            Line::from(""),
-            Line::from(" • Gewicht (Weight Units, WU):"),
-            Line::from("   - Eingeführt mit SegWit-Update"),
-            Line::from("   - Maximales Block-Limit: 4.000.000 WU"),
-            Line::from("   - Normale Daten: 4 WU pro Byte"),
-            Line::from("   - Witness-Daten: 1 WU pro Byte"),
-            Line::from("   - Ermöglicht mehr Transaktionen pro Block"),
-            Line::from(""),
-            Line::from(" • Beispielrechnung:"),
-            Line::from("   - TX mit 200 Byte normalen Daten = 800 WU"),
-            Line::from("   - Plus 100 Byte Witness-Daten = 100 WU"),
-            Line::from("   - Gesamt: 900 WU = 225 vBytes"),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("🕒 Zeit & Block", 
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
-            ]),
-            Line::from(" • Zeit: Bestätigungszeitpunkt"),
-            Line::from("   - Wann die TX in einen Block aufgenommen wurde"),
-            Line::from("   - Bei unbestätigten TXs: 'Noch nicht bestätigt'"),
-            Line::from(""),
-            Line::from(" • Block Hash: Eindeutige Block-ID"),
-            Line::from("   - Zeigt den Block, der die TX enthält"),
-            Line::from("   - Bei unbestätigten TXs: leer"),
-            Line::from(""),
-        ],
-        _ => create_default_help(),
+        Tab::TxDetails => create_tx_help(),
+        Tab::AddressDetails => create_address_help(),
+        Tab::Mempool => create_mempool_help(),
+        Tab::Network => create_network_help(),
+        Tab::PeerList => create_peer_list_help(),
+        Tab::Mining => create_mining_help(),
+        Tab::Security => create_security_help(),
     };
 
     Paragraph::new(content)
@@ -93,58 +28,44 @@ pub fn create_help(tab: &Tab, _scroll: usize) -> Paragraph<'static> {
 fn create_block_help() -> Vec<Line<'static>> {
     vec![
         Line::from(vec![
-            Span::styled("Block Details", 
+            Span::styled("Block Details - Anatomie eines Bitcoin Blocks", 
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("📦 Block Information", 
+            Span::styled("📦 Block Identifikation", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Höhe: Position des Blocks in der Blockchain"),
-        Line::from(" • Hash: Eindeutige Block-ID (64 Zeichen)"),
-        Line::from(" • Zeit: Zeitstempel der Block-Erstellung (UTC)"),
+        Line::from(" • Blockhöhe: Position in der Blockchain"),
+        Line::from("   → Genesis = Block 0, jeder neue Block +1"),
+        Line::from(" • Block Hash: Eindeutige Kennung des Blocks"),
+        Line::from("   → Berechnet aus allen Block-Daten"),
+        Line::from(" • Zeitstempel: Erstellungszeit des Blocks"),
+        Line::from("   → Muss zwischen Medianzeit der letzten Blöcke und 2h in Zukunft liegen"),
         Line::from(""),
         Line::from(vec![
-            Span::styled("🔍 Block Details", 
+            Span::styled("📊 Block Größen", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Transaktionen: Vom Miner ausgewählte TXs"),
-        Line::from(" • Größe: Tatsächliche Größe des Blocks in Bytes"),
-        Line::from(" • Gewicht: Alternative Messung der Blockgröße"),
+        Line::from(" • Transaktionen: Anzahl der enthaltenen TXs"),
+        Line::from("   → Erste TX ist immer die Mining-Belohnung"),
+        Line::from(" • Größe: Speicherplatz des Blocks in Bytes"),
+        Line::from("   → 1 Byte = 8 Bits, max. 4.000.000 Bytes pro Block"),
+        Line::from(" • Gewicht: Neue Messung seit SegWit-Update"),
+        Line::from("   → Maximal 4.000.000 Gewichtseinheiten pro Block"),
         Line::from(""),
         Line::from(vec![
-            Span::styled("🔧 Technische Details", 
+            Span::styled("⛏️ Mining Informationen", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
         Line::from(" • Version: Protokoll-Version des Blocks"),
-        Line::from(" • Merkle Root: Hash aller Transaktionen"),
-        Line::from(" • Bits: Schwierigkeitsgrad für Mining"),
-        Line::from(" • Nonce: Vom Miner gefundene Lösung"),
-    ]
-}
-
-// Standard-Hilfe für nicht spezifizierte Tabs
-fn create_default_help() -> Vec<Line<'static>> {
-    vec![
-        Line::from(vec![
-            Span::styled("Hilfe", 
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(""),
-        Line::from("Wählen Sie einen Tab aus, um spezifische Hilfe anzuzeigen."),
-        Line::from(""),
-        Line::from("Tastenkombinationen:"),
-        Line::from(" • H: Diese Hilfe ein-/ausblenden"),
-        Line::from(" • Q: Programm beenden"),
-        Line::from(" • C: Kopier-Modus aktivieren/deaktivieren"),
-        Line::from(" • ESC: Kopier-Modus beenden"),
-        Line::from(""),
-        Line::from("Kopier-Modus:"),
-        Line::from(" • Aktivieren Sie den Modus mit 'C'"),
-        Line::from(" • Wichtige Werte werden hervorgehoben"),
-        Line::from(" • Kopieren Sie mit der Maus oder Strg+Shift+C"),
-        Line::from(" • Beenden Sie den Modus mit ESC"),
+        Line::from("   → Zeigt unterstützte Bitcoin-Funktionen"),
+        Line::from(" • Merkle Root: Prüfsumme aller Transaktionen"),
+        Line::from("   → Ermöglicht schnelles Verifizieren der TXs"),
+        Line::from(" • Bits: Aktuelle Mining-Schwierigkeit"),
+        Line::from("   → Je kleiner die Zahl, desto schwieriger"),
+        Line::from(" • Nonce: Zufallszahl für Mining"),
+        Line::from("   → Wird verändert bis gültiger Block gefunden"),
     ]
 }
 
@@ -164,80 +85,314 @@ pub fn export_help() {
 fn create_dashboard_help() -> Vec<Line<'static>> {
     vec![
         Line::from(vec![
-            Span::styled("Dashboard Übersicht", 
+            Span::styled("Dashboard - Ihr Bitcoin Node auf einen Blick", 
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         ]),
         Line::from(""),
-        Line::from("Das Dashboard zeigt den aktuellen Status Ihres Bitcoin Nodes an und bietet folgende Informationen:"),
+        Line::from("Willkommen! Hier sehen Sie den Status Ihres Bitcoin Nodes:"),
         Line::from(""),
-        Line::from(" • Netzwerk: Zeigt das aktuelle Netzwerk an, in dem Ihr Node läuft (z.B. main, test, regtest, signet)."),
-        Line::from(" • Peers: Anzahl der verbundenen Nodes. Mehr als 8 Verbindungen werden empfohlen für eine stabile Netzwerkverbindung."),
-        Line::from(""),
-        Line::from(" • Blöcke: Die aktuelle Höhe der Blockchain, d.h. die Anzahl der Blöcke, die Ihr Node kennt."),
-        Line::from(" • Headers: Anzahl der bekannten Block-Header. Sollte gleich oder größer als die Anzahl der Blöcke sein."),
-        Line::from(" • Difficulty: Die aktuelle Mining-Schwierigkeit. Je höher der Wert, desto schwieriger ist es, einen neuen Block zu finden."),
-        Line::from(" • Chain Work: Die gesamte Arbeit, die seit dem Genesis-Block geleistet wurde. Ein Maß für die Sicherheit der Blockchain."),
-        Line::from(""),
-        Line::from(" • Status: Der Fortschritt der Blockchain-Synchronisation in Prozent. Grün bedeutet vollständig synchronisiert."),
-        Line::from(" • IBD: Initial Block Download. Zeigt an, ob der Node noch Blöcke herunterlädt oder bereits auf dem neuesten Stand ist."),
-        Line::from(" • Speicherplatz: Der Speicherplatz, den die Blockchain auf Ihrer Festplatte belegt."),
-        Line::from(" • Pruned: Gibt an, ob die Blockchain-Größe reduziert wurde, um Speicherplatz zu sparen."),
-        Line::from(""),
-        Line::from(" • Mempool: Anzahl der unbestätigten Transaktionen im lokalen Mempool. Kann von anderen Nodes abweichen."),
-        // Netzwerk Sektion
         Line::from(vec![
-            Span::styled("⚡ Netzwerk & Verbindungen", 
+            Span::styled("⚡ Netzwerk", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Netzwerk: main/test/regtest/signet"),
-        Line::from(" • Peers: Verbundene Nodes (>8 empfohlen)"),
+        Line::from(" • Mainnet: Das produktive Bitcoin-Netzwerk"),
+        Line::from(" • Testnet: Testnetzwerk für Entwicklung (kostenlose Testnet-BTC)"),
+        Line::from(" • Peers: Verbundene Bitcoin Nodes im P2P-Netzwerk"),
+        Line::from("   → Mindestens 8 Peers für optimale Dezentralisierung"),
+        Line::from("   → Mehr Peers = bessere Netzwerkresilienz"),
         Line::from(""),
-        // Blockchain Status
         Line::from(vec![
-            Span::styled("📦 Blockchain Status", 
+            Span::styled("📦 Blockchain", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Blöcke: Aktuelle Blockchain-Höhe"),
-        Line::from(" • Headers: Bekannte Block-Header"),
-        Line::from(" • Difficulty: Mining-Schwierigkeit: 108,522,647,020,298"),
-        Line::from(" • Chain Work: Gesamte Mining-Arbeit: 0000000000000000000000000000000000000000000000000000000000000000"),
+        Line::from(" • Blöcke: Anzahl validierter Blöcke in der Blockchain"),
+        Line::from("   → Jeder Block enthält mehrere Transaktionen"),
+        Line::from(" • Headers: Block-Header der bekannten Blöcke"),
+        Line::from("   → Sollte identisch mit der Blockhöhe sein"),
+        Line::from(" • Difficulty: Mining-Schwierigkeit des Netzwerks"),
+        Line::from("   → Automatische Anpassung alle 2016 Blöcke"),
+        Line::from(" • Chain Work: Kumulierter Proof-of-Work der Chain"),
+        Line::from("   → Maß für die Sicherheit der Blockchain"),
         Line::from(""),
-        // Synchronisation
         Line::from(vec![
-            Span::styled("🔄 Synchronisation", 
+            Span::styled("🔄 Status", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Status: Fortschritt in % (grün = synchronisiert)"),
-        Line::from(" • IBD: Initial Block Download - Download der kompletten Blockchain"),
-        Line::from("   'Aktiv' = Node lädt noch Blöcke herunter"),
-        Line::from("   'Abgeschlossen' = Node ist auf aktuellem Stand"),
-        Line::from(" • Speicherplatz: Blockchain-Größe auf Festplatte"),
-        Line::from(" • Pruned: Reduzierte Blockchain-Größe aktiv?"),
+        Line::from(" • Fortschritt: Initial Block Download (IBD) Status"),
+        Line::from("   → 100% = Node ist vollständig synchronisiert"),
+        Line::from(" • Speicher: Blockchain-Größe auf der Festplatte"),
+        Line::from("   → Full Node benötigt aktuell etwa 500+ GB"),
+        Line::from(" • Pruned: Node-Modus für reduzierten Speicherbedarf"),
+        Line::from("   → 'Ja' = Nur neuere Blöcke werden vorgehalten"),
+        Line::from("   → 'Nein' = Vollständige Blockchain wird gespeichert"),
         Line::from(""),
-        // Mempool
         Line::from(vec![
             Span::styled("💭 Mempool", 
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • Transaktionen: Unbestätigte TXs im lokalen Mempool"),
-        Line::from(" • Kann von anderen Nodes/Websites abweichen,"),
-        Line::from("   da jeder Node seinen eigenen Mempool hat"),
+        Line::from(" • Unbestätigte Transaktionen im lokalen Mempool"),
+        Line::from(" • Größerer Mempool = höhere Netzwerk-Auslastung"),
+        Line::from(" • Details zu Gebühren (sat/vB) im Mempool-Tab"),
         Line::from(""),
-        // Tastenkombinationen
         Line::from(vec![
-            Span::styled("Tastenkombinationen:", 
+            Span::styled("⌨️ Steuerung", 
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • H: Diese Hilfe ein-/ausblenden"),
+        Line::from(" • H: Diese Hilfe zeigen/verstecken"),
         Line::from(" • Q: Programm beenden"),
-        Line::from(" • C: Kopier-Modus aktivieren/deaktivieren"),
-        Line::from(" • ESC: Kopier-Modus beenden"),
-        Line::from(""),
-        // Navigation
+        Line::from(" • 1-9: Schnell zwischen Tabs wechseln"),
+    ]
+}
+
+fn create_tx_help() -> Vec<Line<'static>> {
+    vec![
         Line::from(vec![
-            Span::styled("Navigation:", 
+            Span::styled("Transaktionsdetails (TX)", 
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(" • 1-9: Tabs direkt auswählen"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("💰 Inputs & Outputs (UTXO-Modell)", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Inputs (Herkunft)                    • Outputs (Ziel)"),
+        Line::from("   → Verweisen auf frühere UTXOs          → Neue UTXOs (Unspent Transaction Outputs)"),
+        Line::from("   → Format: Betrag + TXID               → Format: Betrag + Empfänger-Adresse"),
+        Line::from("   → Müssen komplett verbraucht werden   → TXID:Index identifiziert jeden Output"),
+        Line::from(""),
+        Line::from(" • Beispiel einer Bitcoin-Transaktion:"),
+        Line::from("   ┌──────────────────────────────────────────────────────────┐"),
+        Line::from("   │ Input:    2.0 BTC (von TXID abc123)                      │"),
+        Line::from("   │ Output 1: 1.2 BTC an Alice     (TXID def456:0)          │"),
+        Line::from("   │ Output 2: 0.7 BTC zurück       (TXID def456:1)          │"),
+        Line::from("   │ Gebühr:   0.1 BTC (Differenz Input-Output)              │"),
+        Line::from("   └──────────────────────────────────────────────────────────┘"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📏 Größenangaben", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Bytes (physikalisch)                 • Weight Units (WU)"),
+        Line::from("   → Tatsächliche Größe der TX           → Interne SegWit-Berechnung"),
+        Line::from("   → Alle TX-Daten inkl. Signaturen     → 1 vByte = 4 WU"),
+        Line::from(""),
+        Line::from(" • vBytes (virtuell)"),
+        Line::from("   → Basis für Gebührenberechnung (sat/vB)"),
+        Line::from("   → Normale Daten: 4 WU = 1 vByte"),
+        Line::from("   → Signatur-Daten: 1 WU = 0.25 vByte"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("🕒 Status", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Bestätigung                          • Block"),
+        Line::from("   → Bestätigt = In einem Block           → Blockhash = Block-ID"),
+        Line::from("   → Unbestätigt = Im Mempool            → Anzahl Bestätigungen seit Aufnahme"),
+    ]
+}
+
+fn create_address_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Adressdetails", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📋 Allgemeine Information", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Adresstyp: P2PKH, P2SH, P2WPKH, P2WSH oder P2TR"),
+        Line::from(" • Erste Aktivität: Zeitpunkt der ersten Transaktion"),
+        Line::from(" • Letzte Aktivität: Zeitpunkt der letzten Transaktion"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("💰 Finanzen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Aktueller Kontostand in BTC"),
+        Line::from(" • Gesamtbetrag empfangen"),
+        Line::from(" • Gesamtbetrag gesendet"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📊 Statistiken", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Anzahl Transaktionen"),
+        Line::from(" • Empfangene UTXOs"),
+        Line::from(" • Ausgegebene UTXOs"),
+        Line::from(" • Unausgegebene UTXOs"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("⚡ Mempool", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Unbestätigte Transaktionen"),
+        Line::from(" • Eingehende Beträge"),
+        Line::from(" • Ausgehende Beträge"),
+    ]
+}
+
+fn create_mempool_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Mempool Übersicht", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📊 Statistiken", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Anzahl Transaktionen: Aktuell unbestätigte TXs"),
+        Line::from(" • Gesamtgröße: Speicherbedarf in MB"),
+        Line::from(" • Gesamtgebühren: Summe aller TX-Gebühren"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("💰 Gebührenkategorien", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Niedrig: 1-5 sat/vB"),
+        Line::from(" • Mittel: 6-20 sat/vB"),
+        Line::from(" • Hoch: >20 sat/vB"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("⏳ Schätzungen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Nächster Block: Wahrscheinliche TXs"),
+        Line::from(" • Wartezeit: Geschätzt pro Kategorie"),
+    ]
+}
+
+fn create_network_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Netzwerk Übersicht", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("🌐 Verbindungen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Eingehend: Verbindungen zu Ihrem Node"),
+        Line::from(" • Ausgehend: Verbindungen zu anderen Nodes"),
+        Line::from(" • Gesamt: Summe aller Verbindungen"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📡 Datenverkehr", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Gesendet: Ausgehende Daten"),
+        Line::from(" • Empfangen: Eingehende Daten"),
+        Line::from(" • Bandbreite: Aktuelle Nutzung"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("🔒 Version", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Protokoll: Bitcoin P2P Version"),
+        Line::from(" • User Agent: Client-Identifikation"),
+        Line::from(" • Services: Angebotene Dienste"),
+    ]
+}
+
+fn create_peer_list_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Peer Liste", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("👥 Verbindungen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • IP/Port: Netzwerkadresse des Peers"),
+        Line::from(" • Version: Bitcoin Core Version"),
+        Line::from(" • Dienste: Angebotene Services"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📊 Statistiken", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Ping: Verbindungsqualität in ms"),
+        Line::from(" • Gesendet: Ausgehende Bytes"),
+        Line::from(" • Empfangen: Eingehende Bytes"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("⏱️ Zeitangaben", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Verbunden seit: Dauer der Verbindung"),
+        Line::from(" • Letzter Block: Zeitpunkt des letzten Blocks"),
+        Line::from(" • Synchronisation: Fortschritt in %"),
+    ]
+}
+
+fn create_mining_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Mining Information", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("⛏️ Mining Status", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Schwierigkeit: Aktuelle Mining-Difficulty"),
+        Line::from(" • Hashrate: Geschätzte Netzwerk-Hashrate"),
+        Line::from(" • Nächste Anpassung: Blocks/Zeit bis Difficulty-Change"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("📈 Block Statistiken", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Letzte Anpassung: Änderung in %"),
+        Line::from(" • Durchschnittliche Blockzeit"),
+        Line::from(" • Blocks seit letzter Anpassung"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("💰 Belohnungen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Block Subsidy: Aktuelle Block-Belohnung"),
+        Line::from(" • Nächste Halbierung: Blocks/Zeit"),
+        Line::from(" • Durchschnittliche Gebühren/Block"),
+    ]
+}
+
+fn create_security_help() -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Sicherheit", 
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("🔒 Node Sicherheit", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Verbindungen: Verschlüsselt/Unverschlüsselt"),
+        Line::from(" • Authentifizierung: RPC Zugriffskontrolle"),
+        Line::from(" • Firewall: Port-Freigaben & Regeln"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("🛡️ Blockchain", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Verifizierung: Signatur-Checks"),
+        Line::from(" • Konsens: Aktuelle Regeln"),
+        Line::from(" • Chain Work: Proof-of-Work Sicherheit"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("⚠️ Warnungen", 
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(" • Version: Sicherheitsupdates verfügbar"),
+        Line::from(" • Netzwerk: Verbindungsprobleme"),
+        Line::from(" • System: Ressourcenauslastung"),
     ]
 } 
