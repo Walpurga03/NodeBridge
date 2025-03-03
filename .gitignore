@@ -8,7 +8,7 @@
 
 # Logs
 *.log
-+ debug.log
+debug.log
 
 # OS Files
 .DS_Store
