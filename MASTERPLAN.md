@@ -1,134 +1,146 @@
-# NodeBridge - Bitcoin Node Interface
-Ein TUI (Text User Interface) Tool zur Interaktion mit Bitcoin Core Nodes
+# NodeBridge - Masterplan
 
-## 🎯 Projektziel
-NodeBridge soll eine benutzerfreundliche, ressourcenschonende Schnittstelle zwischen Benutzern und Bitcoin Nodes bieten. Der Fokus liegt auf schnellem Zugriff auf wichtige Node-Informationen und Blockchain-Daten.
+## Übersicht und Ziele
+NodeBridge ist eine moderne Desktop-Anwendung zur Visualisierung und Interaktion mit einer persönlichen Bitcoin Full Node. Die Anwendung ermöglicht es, verschiedene Node-Daten in einer ansprechenden, benutzerfreundlichen Oberfläche darzustellen und zu analysieren.
 
-## 🔧 Technologie-Stack
-- **Programmiersprache**: Rust
-- **UI Framework**: Ratatui (TUI)
-- **Bitcoin Integration**: bitcoincore-rpc
-- **APIs**: 
-  - Bitcoin Core RPC
-  - mempool.space API
-- **Logging**: log, env_logger
-- **Asynchrone Laufzeit**: tokio
-- **Weitere Tools**:
-  - dotenv (Konfiguration)
-  - anyhow (Fehlerbehandlung)
-  - serde_json (JSON Verarbeitung)
-  - tokio (Async Runtime)
+### Hauptziele:
+- Graphische Darstellung von Bitcoin-Node-Daten
+- Moderne, animierte Benutzeroberfläche
+- Sichere lokale Verbindung zur eigenen Bitcoin-Node via RPC
+- Detaillierte Abfrage- und Analysefunktionen
 
-## 📋 Kernfunktionen
+## Zielpublikum
+- Persönliche Nutzung im eigenen Netzwerk
 
-### 1. Node Management
-- Verbindung zu Bitcoin Core Nodes
-- Status-Monitoring
-- Netzwerk-Informationen
-- Peer-Verwaltung
+## Hauptfunktionen
 
-### 2. Blockchain Explorer
-- Block-Informationen
-- Transaktionsdetails
-- Adress-Lookup
-- UTXO-Tracking
+### Bitcoin-Node-Monitoring
+- Blockchain-Informationen
+- Mempool-Statistiken 
+- Aktuelle Blockhöhe und Block-Details
+- Difficulty und Mining-Erwartungen
 
-### 3. Mempool Analyse
-- Aktuelle Transaktionen
-- Gebühren-Statistiken
-- Unbestätigte Transaktionen
+### Transaktionsanalyse
+- Transaktionsdetails abfragen
+- Gebührenübersicht
 
-### 4. Benutzeroberfläche
-- Multi-Tab Interface
-- Responsive Design
-- Echtzeit-Updates
-- Hilfe-System
-- Farbkodierung
+### Netzwerk
+- Übersicht verbundener Peers
+- Netzwerkstatistiken
 
-### 5. Wallet-Integration
-- Verbindung zu verschiedenen Wallets
-- Verwaltung von Wallet-Adressen
-- Transaktionssignierung
+### Adressanalyse
+- Adressabfragen
+- Verfolgung von Inputs und Outputs
 
-### 6. Multi-Address-Support
-- Unterstützung für mehrere Bitcoin-Adressen
-- Synchronisation von Adressdaten
+## Technischer Stack
 
-## 🎨 Design-Prinzipien
-1. **Benutzerfreundlichkeit**
-   - Intuitive Navigation
-   - Klare Datendarstellung
-   - Kontextsensitive Hilfe
+### Frontend
+- **Framework**: React mit TypeScript
+- **Build-Tool**: Vite
+- **Styling**: SCSS
+- **State Management**: Redux oder Zustand
+- **Animationen**: Framer Motion oder React Spring
+- **Diagramme**: Recharts oder Chart.js
+- **Tabellen**: React Table oder TanStack Table
 
-2. **Performance**
-   - Effizientes Caching
-   - Minimaler Ressourcenverbrauch
-   - Schnelle Reaktionszeiten
+### Backend
+- **Sprache**: Rust
+- **Web-Framework**: Axum oder Actix Web
+- **Bitcoin-Interaktion**: rust-bitcoincore-rpc
+- **Konfiguration**: dotenv für .env-Datei-Verarbeitung
 
-3. **Zuverlässigkeit**
-   - Robuste Fehlerbehandlung
-   - Automatische Wiederverbindung
-   - Datenvalidierung
+## Konzeptuelles Datenmodell
 
-## 📈 Entwicklungsphasen
+### Hauptentitäten
+- **BlockchainInfo**: Aktuelle Blockchain-Daten
+- **MempoolInfo**: Daten zum aktuellen Mempool
+- **BlockInfo**: Details zu spezifischen Blöcken
+- **TransactionInfo**: Details zu spezifischen Transaktionen
+- **AddressInfo**: Details zu Bitcoin-Adressen
+- **PeerInfo**: Informationen zu verbundenen Peers
+- **NetworkInfo**: Allgemeine Netzwerkinformationen
 
-### Phase 1: Grundfunktionen ✅
-- Bitcoin Core RPC Integration
-- Basis-UI mit TUI
-- Block Explorer
-- Adressdetails
+## UI/UX-Design
 
-### Phase 2: Erweiterungen 🚧
-- Erweiterte Transaktionsanalyse
-- Verbessertes Error-Handling
-- Performance-Optimierungen
-- Umfassende Dokumentation
+### Designprinzipien
+- Modernes, minimalistisches Design
+- Dunkles Farbschema mit Akzentfarben
+- Responsive Layouts für optimale Desktop-Nutzung
+- Animierte Übergänge und interaktive Elemente
 
-### Phase 3: Fortgeschrittene Features 📝
-- Wallet-Integration
-- Multi-Adress-Support
-- Export-Funktionen
-- Internationalisierung
+### SCSS-Struktur
+- Modulare SCSS-Architektur (z.B. 7-1 Pattern)
+- Wiederverwendbare Mixins und Funktionen
+- Konsistente Variablen für Farben, Schriften und Abstände
+- BEM oder ähnliche Namenskonvention für Klassenstruktur
 
-## 🔒 Sicherheitsaspekte
-- Sichere RPC-Kommunikation
-- Datenvalidierung
-- Keine sensiblen Daten im Speicher
-- Logging-Sicherheit
+### Layout-Struktur
+- Seitenleiste für Hauptnavigation
+- Hauptbereich für Datenvisualisierung
+- Kategoriebasierte Ansichten für verschiedene Datentypen
+- Vollbildnutzung für Desktop
 
-## 📊 Qualitätssicherung
-- Unit Tests
-- Integration Tests
-- Performance Tests
-- Code Reviews
-- Dokumentation
+### Interaktionsmuster
+- Manuelle Datenaktualisierung per Button
+- Automatische Aktualisierung alle 10 Minuten (konfigurierbar)
+- Detailansichten für spezifische Elemente (Transaktionen, Blöcke etc.)
 
-## 🌐 Zielgruppe
-- Bitcoin Node-Betreiber
-- Blockchain-Entwickler
-- Netzwerk-Administratoren
-- Cryptocurrency-Enthusiasten
+## Sicherheitsüberlegungen
+- RPC-Authentifizierung über .env-Datei
+- Ausschließlich lokale Nutzung im eigenen Netzwerk
+- Keine externen API-Anfragen oder Datenübertragungen
+- Keine Speicherung sensibler Daten
 
-## 📝 Dokumentation
-- Inline Code-Dokumentation
-- API-Dokumentation
-- Benutzerhandbuch
-- Entwicklerdokumentation
+## Entwicklungsphasen
 
-## 🔄 Wartung & Updates
-- Regelmäßige Dependency-Updates
-- Performance-Monitoring
-- Bug-Fixing
-- Feature-Requests
+### Phase 1: Grundlagen
+- Setup des Frontend-Projekts (Vite, React, TypeScript, SCSS)
+- Setup des Backend-Projekts (Rust)
+- Implementierung der RPC-Verbindung zum Bitcoin-Node
 
-## 📈 Zukunftsperspektiven
+### Phase 2: Backend-Entwicklung
+- Entwicklung der API-Endpunkte für verschiedene Node-Daten
+- Implementierung der Datenverarbeitung und -formatierung
+- Fehlerbehandlung und Logging
+
+### Phase 3: Frontend-Grundstruktur
+- Entwicklung des Basis-Layouts
+- Implementierung der Navigation
+- Setup des State Managements
+- Erstellung der SCSS-Basisstruktur und Variablen
+
+### Phase 4: Datenvisualisierung
+- Implementierung von Tabellen für strukturierte Daten
+- Integration von Diagrammen für zeitbasierte Daten
+- Entwicklung der Adress- und Transaktionsverfolgung
+
+### Phase 5: UI/UX-Verbesserungen
+- Integration von Animationen
+- Entwicklung moderner Stil-Elemente mit SCSS
+- Optimierung der Benutzeroberfläche
+
+### Phase 6: Tests und Optimierung
+- Umfassende Tests der Anwendung
+- Performance-Optimierung
+- Bugfixing
+
+## Potentielle Herausforderungen und Lösungen
+
+### Herausforderung: Performante Datenaktualisierung
+**Lösung**: Effizienter Rust-Code im Backend, selektive Datenabrufe, asynchrone Datenverarbeitung
+
+### Herausforderung: Komplexe Visualisierungen
+**Lösung**: Schrittweise Implementierung von Diagrammen, Nutzung etablierter Bibliotheken
+
+### Herausforderung: Konsistentes Design mit SCSS
+**Lösung**: Gut strukturierte SCSS-Dateien, wiederverwendbare Komponenten, klares Style-Guide-Dokument
+
+### Herausforderung: RPC-Verbindungsstabilität
+**Lösung**: Robuste Fehlerbehandlung, automatische Wiederverbindungsversuche, klare Statusanzeigen
+
+## Zukünftige Erweiterungsmöglichkeiten
+- Historische Datenerfassung und -visualisierung
+- Benachrichtigungssystem für wichtige Events
 - Lightning Network Integration
-- Erweiterte Analysewerkzeuge
-- GUI-Version
-- Plugin-System
-
-## 👥 Beitragen
-Contributions sind willkommen! Siehe CONTRIBUTING.md für Details.
-
-## 📄 Lizenz
-MIT License - Siehe LICENSE für Details
+- Erweiterte Analysetools für Blockchain-Daten
+- Exportfunktionen für Berichte und Statistiken
